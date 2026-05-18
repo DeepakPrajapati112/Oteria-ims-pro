@@ -13,14 +13,11 @@ app.secret_key = os.environ.get('SECRET_KEY', 'inventory-secret-key-2024')
 # ============================================================
 # DATABASE CONNECTION - Production Ready
 # ============================================================
-# Render/Koyeb पर DATABASE_URL environment variable में Neon connection string डालें
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if not DATABASE_URL:
-    # Local development के लिए (अगर environment variable नहीं है तो)
     DATABASE_URL = "postgresql://neondb_owner:npg_F1kgVCxvAK2o@ep-quiet-river-aoi8ja0k-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
-# Neon URL format fix - 'postgres://' को 'postgresql://' में बदलें
 if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
@@ -311,6 +308,12 @@ def logout():
     log_transaction('LOGOUT', current_user.username, f'User {current_user.username} logged out', current_user.username)
     logout_user()
     return redirect(url_for('login'))
+
+# ========== HEALTH CHECK ENDPOINT (KEEP ALIVE) ==========
+@app.route('/health')
+def health_check():
+    """Simple health check endpoint for uptime monitoring"""
+    return "OK", 200
 
 # ========== API ROUTES ==========
 
@@ -1541,7 +1544,6 @@ if __name__ == '__main__':
         db.create_all()
         print("✅ Tables created successfully!")
         
-        # Add new columns to users table if not exists
         try:
             db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(200)")
             db.session.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(200)")
@@ -1566,7 +1568,6 @@ if __name__ == '__main__':
         
         print("=" * 60)
     
-    # Production server ke liye - Render automatically PORT environment variable set karega
     port = int(os.environ.get('PORT', 5000))
     
     print("\n" + "=" * 60)
@@ -1575,5 +1576,4 @@ if __name__ == '__main__':
     print("🔐 Login: admin / admin123")
     print("=" * 60 + "\n")
     
-    # Production mode mein debug=False
     app.run(debug=False, host='0.0.0.0', port=port)
