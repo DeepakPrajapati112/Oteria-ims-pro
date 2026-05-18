@@ -1,0 +1,1095 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .order-status {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .status-created { background-color: #17a2b8; color: white; }
+    .status-invoiced { background-color: #ffc107; color: black; }
+    .status-shipped { background-color: #28a745; color: white; }
+    .status-returned { background-color: #fd7e14; color: white; }
+    .status-cancelled { background-color: #dc3545; color: white; }
+    .order-card {
+        border-left: 4px solid #667eea;
+        margin-bottom: 15px;
+        transition: transform 0.2s;
+        background: white;
+    }
+    .order-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .order-item-row {
+        background: #f8f9fa;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    .section-title {
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        color: #333;
+        font-weight: 600;
+    }
+    .order-header-section {
+        background: #f0f4ff;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .orders-list-section {
+        max-height: 550px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    .nav-tabs .nav-link {
+        color: #667eea;
+        font-weight: 500;
+    }
+    .nav-tabs .nav-link.active {
+        background-color: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .header-5col {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 0;
+        align-items: flex-start;
+    }
+    .field-col {
+        flex: 1;
+        min-width: 150px;
+    }
+    .field-col label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #333;
+    }
+    .field-col input, .field-col select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 13px;
+    }
+    .field-col small {
+        display: block;
+        font-size: 10px;
+        color: #6c757d;
+        margin-top: 2px;
+    }
+    
+    .items-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+    .items-header {
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    .col-sku { flex: 1; min-width: 100px; }
+    .col-item-name { flex: 1.3; min-width: 120px; }
+    .col-bin { flex: 0.8; min-width: 90px; }
+    .col-batch { flex: 0.8; min-width: 90px; }
+    .col-available { flex: 0.7; min-width: 80px; }
+    .col-order-qty { flex: 0.6; min-width: 70px; }
+    .col-item-price { flex: 0.7; min-width: 80px; }
+    .col-total-price { flex: 0.8; min-width: 90px; }
+    .col-remarks { flex: 1.2; min-width: 100px; }
+    .col-action { flex: 0.5; min-width: 50px; }
+    
+    .batch-actions {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        border: 1px solid #dee2e6;
+    }
+    .order-select-checkbox {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
+    
+    .order-item-line {
+        background: #f8f9fa;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        border-radius: 6px;
+        border-left: 3px solid #28a745;
+        font-size: 12px;
+        font-family: 'Segoe UI', monospace;
+    }
+    .order-item-line:hover {
+        background: #e9ecef;
+    }
+    .item-detail-text {
+        color: #333;
+    }
+    .item-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    .bin-badge {
+        background: #dc3545;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        display: inline-block;
+        font-size: 11px;
+    }
+    .warehouse-badge {
+        background: #17a2b8;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        display: inline-block;
+        font-size: 11px;
+    }
+    
+    .return-details-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    .return-details-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 0;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 900px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    .return-details-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px 10px 0 0;
+        font-weight: bold;
+    }
+    .return-details-body {
+        padding: 20px;
+        max-height: 550px;
+        overflow-y: auto;
+    }
+    .return-details-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #ddd;
+        text-align: right;
+    }
+    .close-modal {
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: white;
+    }
+    .close-modal:hover {
+        color: #ddd;
+    }
+    .summary-box {
+        background: #e7f3ff;
+        border-left: 4px solid #2196F3;
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .return-items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 12px;
+    }
+    .return-items-table th,
+    .return-items-table td {
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .return-items-table th {
+        background-color: #343a40;
+        color: white;
+    }
+</style>
+
+<div id="returnDetailsModal" class="return-details-modal">
+    <div class="return-details-content">
+        <div class="return-details-header">
+            <span class="close-modal">&times;</span>
+            <span id="modalTitle">📦 Order Cancellation/Return Details</span>
+        </div>
+        <div class="return-details-body" id="modalBody"></div>
+        <div class="return-details-footer">
+            <button class="btn btn-primary" id="confirmReturnBtn">Confirm & Proceed</button>
+            <button class="btn btn-secondary" id="cancelReturnBtn">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<h2>📋 Order Management System</h2>
+
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#createOrderTab">🛒 Create New Order</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#ordersListTab">📦 Orders List</a>
+    </li>
+</ul>
+
+<div class="tab-content mt-3">
+    
+    <div class="tab-pane fade show active" id="createOrderTab">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Create New Order</h5>
+            </div>
+            <div class="card-body">
+                <div class="order-header-section">
+                    <div class="header-5col">
+                        <div class="field-col">
+                            <label class="required">Order ID</label>
+                            <input type="text" class="form-control" id="orderId" placeholder="Leave empty for auto-generate">
+                            <small>Leave empty for auto-generate unique ID</small>
+                        </div>
+                        <div class="field-col">
+                            <label class="required">Order Date</label>
+                            <input type="date" class="form-control" id="orderDate">
+                            <small>No future date</small>
+                        </div>
+                        <div class="field-col">
+                            <label class="required">Business Type</label>
+                            <select class="form-control" id="businessType">
+                                <option value="">Select</option>
+                                <option value="E-Commerce">E-Commerce</option>
+                                <option value="B2B">B2B</option>
+                                <option value="Offline">Offline</option>
+                                <option value="Shipment">Shipment</option>
+                            </select>
+                        </div>
+                        <div class="field-col">
+                            <label class="required">Platform Name</label>
+                            <select class="form-control" id="platformName">
+                                <option value="">Select</option>
+                                <option value="Amazon">Amazon</option>
+                                <option value="Flipkart">Flipkart</option>
+                                <option value="Myntra">Myntra</option>
+                                <option value="Nykaa">Nykaa</option>
+                                <option value="Website">Website</option>
+                                <option value="Offline">Offline</option>
+                                <option value="Employee">Employee</option>
+                                <option value="Purplle">Purplle</option>
+                            </select>
+                        </div>
+                        <div class="field-col">
+                            <label class="required">Payment Mode</label>
+                            <select class="form-control" id="paymentMode">
+                                <option value="Cash On Delivery">Cash On Delivery (COD)</option>
+                                <option value="Pre-Paid">Pre-Paid</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <h6 class="section-title">📦 Order Items</h6>
+                
+                <div class="items-header items-row">
+                    <div class="col-sku"><strong>SKU Code</strong> <span style="color:red;">*</span></div>
+                    <div class="col-item-name"><strong>Item Name</strong></div>
+                    <div class="col-bin"><strong>Bin No</strong></div>
+                    <div class="col-batch"><strong>Batch No</strong></div>
+                    <div class="col-available"><strong>Available Qty</strong></div>
+                    <div class="col-order-qty"><strong>Order Qty</strong> <span style="color:red;">*</span></div>
+                    <div class="col-item-price"><strong>Item Price</strong> <span style="color:red;">*</span></div>
+                    <div class="col-total-price"><strong>Total Price</strong></div>
+                    <div class="col-remarks"><strong>Remarks</strong></div>
+                    <div class="col-action"><strong>Action</strong></div>
+                </div>
+                
+                <div id="orderItemsContainer">
+                    <div class="order-item-row" data-item-index="0">
+                        <div class="items-row">
+                            <div class="col-sku">
+                                <input type="text" class="form-control form-control-sm sku-input" placeholder="Enter SKU">
+                            </div>
+                            <div class="col-item-name">
+                                <input type="text" class="form-control form-control-sm item-name-display" readonly placeholder="Auto fetch">
+                            </div>
+                            <div class="col-bin">
+                                <select class="form-control form-control-sm bin-select" disabled>
+                                    <option value="">Select SKU first</option>
+                                </select>
+                            </div>
+                            <div class="col-batch">
+                                <select class="form-control form-control-sm batch-select" disabled>
+                                    <option value="">Select Bin first</option>
+                                </select>
+                            </div>
+                            <div class="col-available">
+                                <input type="text" class="form-control form-control-sm available-qty" readonly placeholder="Auto">
+                            </div>
+                            <div class="col-order-qty">
+                                <input type="number" class="form-control form-control-sm order-qty" min="1" placeholder="Qty">
+                            </div>
+                            <div class="col-item-price">
+                                <input type="number" class="form-control form-control-sm item-price" step="0.01" placeholder="Price">
+                            </div>
+                            <div class="col-total-price">
+                                <input type="text" class="form-control form-control-sm total-price" readonly placeholder="Auto">
+                            </div>
+                            <div class="col-remarks">
+                                <input type="text" class="form-control form-control-sm remarks-input" placeholder="Optional">
+                            </div>
+                            <div class="col-action">
+                                <button class="btn btn-danger btn-sm remove-item" disabled>✕</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-info btn-sm mt-3 mb-3" id="addMoreItems">+ Add More Items</button>
+                <button class="btn btn-success w-100 mt-2" id="createOrderBtn">✅ Create Order</button>
+                <div id="orderMsg" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tab-pane fade" id="ordersListTab">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Orders List</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="searchOrder" placeholder="🔍 Search by Order ID...">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="Created">Created</option>
+                            <option value="Invoiced">Invoiced</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Returned">Returned</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <button class="btn btn-warning w-100" id="batchUpdateBtn" disabled>📦 Update Selected (0)</button>
+                    </div>
+                </div>
+                
+                <div class="batch-actions" id="batchActions" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6"><strong>Selected Orders: <span id="selectedCount">0</span></strong></div>
+                        <div class="col-md-6">
+                            <select class="form-control" id="batchStatusSelect">
+                                <option value="">Select Action</option>
+                                <option value="Invoiced">📄 Move to Invoiced</option>
+                                <option value="Shipped">🚚 Move to Shipped</option>
+                                <option value="Cancelled">❌ Cancel Orders</option>
+                                <option value="Returned">↩️ Return Orders</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm mt-2 w-100" id="applyBatchBtn">Apply to Selected</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="ordersList" class="orders-list-section mt-3"></div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+// Get current location from global storage
+var currentLocation = localStorage.getItem('globalLocation') || 'Manak_Vihar';
+console.log("Current Location for Orders:", currentLocation);
+
+var inventoryData = [];
+var selectedOrders = new Set();
+var pendingOrderId = null;
+var pendingAction = null;
+var existingOrderIds = new Set();
+
+var modal = document.getElementById('returnDetailsModal');
+var modalTitle = document.getElementById('modalTitle');
+var modalBody = document.getElementById('modalBody');
+var confirmBtn = document.getElementById('confirmReturnBtn');
+var cancelBtn = document.getElementById('cancelReturnBtn');
+var closeSpan = document.querySelector('.close-modal');
+
+function formatPrice(price) {
+    if (price === undefined || price === null) return '0.00';
+    return parseFloat(price).toFixed(2);
+}
+
+function setDefaultOrderDate() {
+    var today = new Date();
+    var year = today.getFullYear();
+    var month = String(today.getMonth() + 1).padStart(2, '0');
+    var day = String(today.getDate()).padStart(2, '0');
+    var orderDate = document.getElementById('orderDate');
+    if (orderDate) {
+        orderDate.value = year + '-' + month + '-' + day;
+        orderDate.max = year + '-' + month + '-' + day;
+    }
+}
+
+function loadExistingOrderIds() {
+    return fetch('/api/orders')
+        .then(function(response) { return response.json(); })
+        .then(function(orders) {
+            existingOrderIds.clear();
+            for (var i = 0; i < orders.length; i++) {
+                existingOrderIds.add(orders[i].order_id);
+            }
+            console.log("Loaded existing order IDs:", existingOrderIds.size);
+        });
+}
+
+// ========== FIXED: Generate truly unique order ID with timestamp ==========
+function generateUniqueOrderId() {
+    var now = new Date();
+    var timestamp = now.getFullYear() + 
+                    String(now.getMonth() + 1).padStart(2, '0') + 
+                    String(now.getDate()).padStart(2, '0') + 
+                    String(now.getHours()).padStart(2, '0') + 
+                    String(now.getMinutes()).padStart(2, '0') + 
+                    String(now.getSeconds()).padStart(2, '0') +
+                    String(now.getMilliseconds()).padStart(3, '0');
+    var randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return 'ORD-' + timestamp + randomNum;
+}
+
+function loadInventoryData() {
+    return fetch('/api/inventory?warehouse=' + currentLocation)
+        .then(function(response) { 
+            if (!response.ok) throw new Error('Inventory API failed: ' + response.status);
+            return response.json(); 
+        })
+        .then(function(data) { 
+            inventoryData = data;
+            console.log("Inventory loaded:", inventoryData.length, "items for location:", currentLocation);
+            return inventoryData; 
+        });
+}
+
+function getBinsForSKU(sku) {
+    var bins = [];
+    var seenBins = {};
+    for (var i = 0; i < inventoryData.length; i++) {
+        var item = inventoryData[i];
+        if (item.sku_code === sku && item.quantity > 0) {
+            if (!seenBins[item.bin_no]) {
+                seenBins[item.bin_no] = true;
+                bins.push({ bin: item.bin_no });
+            }
+        }
+    }
+    return bins;
+}
+
+function getBatchesForSKUAndBin(sku, bin) {
+    var batches = [];
+    for (var i = 0; i < inventoryData.length; i++) {
+        var item = inventoryData[i];
+        if (item.sku_code === sku && item.bin_no === bin && item.quantity > 0) {
+            batches.push({
+                batch: item.batch_number,
+                inventoryId: item.id,
+                quantity: item.quantity,
+                sellingPrice: item.selling_price
+            });
+        }
+    }
+    return batches;
+}
+
+function getProductName(sku) {
+    for (var i = 0; i < inventoryData.length; i++) {
+        if (inventoryData[i].sku_code === sku) {
+            return inventoryData[i].product_name;
+        }
+    }
+    return '';
+}
+
+function calculateTotalPrice(row) {
+    var qty = row.querySelector('.order-qty').value;
+    var price = row.querySelector('.item-price').value;
+    if (qty && price) {
+        var total = parseFloat(qty) * parseFloat(price);
+        row.querySelector('.total-price').value = '₹' + total.toFixed(2);
+    }
+}
+
+function setupRowEvents(row) {
+    var skuInput = row.querySelector('.sku-input');
+    skuInput.addEventListener('change', function() {
+        var sku = this.value.toUpperCase();
+        if (sku) {
+            var productName = getProductName(sku);
+            row.querySelector('.item-name-display').value = productName;
+            
+            var bins = getBinsForSKU(sku);
+            var binSelect = row.querySelector('.bin-select');
+            binSelect.innerHTML = '<option value="">Select Bin</option>';
+            for (var i = 0; i < bins.length; i++) {
+                binSelect.innerHTML += '<option value="' + bins[i].bin + '">' + bins[i].bin + '</option>';
+            }
+            binSelect.disabled = false;
+            
+            row.querySelector('.batch-select').innerHTML = '<option value="">Select Bin first</option>';
+            row.querySelector('.batch-select').disabled = true;
+        }
+    });
+    
+    var binSelect = row.querySelector('.bin-select');
+    binSelect.addEventListener('change', function() {
+        var sku = row.querySelector('.sku-input').value.toUpperCase();
+        var bin = this.value;
+        if (sku && bin) {
+            var batches = getBatchesForSKUAndBin(sku, bin);
+            var batchSelect = row.querySelector('.batch-select');
+            batchSelect.innerHTML = '<option value="">Select Batch</option>';
+            for (var i = 0; i < batches.length; i++) {
+                batchSelect.innerHTML += '<option value="' + batches[i].batch + '" data-price="' + batches[i].sellingPrice + '" data-qty="' + batches[i].quantity + '">' + batches[i].batch + ' (Qty: ' + batches[i].quantity + ')</option>';
+            }
+            batchSelect.disabled = false;
+        }
+    });
+    
+    var batchSelect = row.querySelector('.batch-select');
+    batchSelect.addEventListener('change', function() {
+        var selectedOption = this.options[this.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            var qty = selectedOption.getAttribute('data-qty');
+            var price = selectedOption.getAttribute('data-price');
+            row.querySelector('.available-qty').value = qty;
+            if (!row.querySelector('.item-price').value) {
+                row.querySelector('.item-price').value = price;
+            }
+        }
+        calculateTotalPrice(row);
+    });
+    
+    var orderQty = row.querySelector('.order-qty');
+    orderQty.addEventListener('input', function() {
+        var available = parseInt(row.querySelector('.available-qty').value) || 0;
+        var qty = parseInt(this.value) || 0;
+        if (qty > available) {
+            alert('Only ' + available + ' units available!');
+            this.value = available;
+        }
+        calculateTotalPrice(row);
+    });
+    
+    var itemPrice = row.querySelector('.item-price');
+    itemPrice.addEventListener('input', function() { calculateTotalPrice(row); });
+}
+
+function addMoreItems() {
+    var container = document.getElementById('orderItemsContainer');
+    var newIndex = container.children.length;
+    var newItem = document.createElement('div');
+    newItem.className = 'order-item-row';
+    newItem.setAttribute('data-item-index', newIndex);
+    newItem.innerHTML = `
+        <div class="items-row">
+            <div class="col-sku"><input type="text" class="form-control form-control-sm sku-input" placeholder="Enter SKU"></div>
+            <div class="col-item-name"><input type="text" class="form-control form-control-sm item-name-display" readonly placeholder="Auto fetch"></div>
+            <div class="col-bin"><select class="form-control form-control-sm bin-select" disabled><option value="">Select SKU first</option></select></div>
+            <div class="col-batch"><select class="form-control form-control-sm batch-select" disabled><option value="">Select Bin first</option></select></div>
+            <div class="col-available"><input type="text" class="form-control form-control-sm available-qty" readonly placeholder="Auto"></div>
+            <div class="col-order-qty"><input type="number" class="form-control form-control-sm order-qty" min="1" placeholder="Qty"></div>
+            <div class="col-item-price"><input type="number" class="form-control form-control-sm item-price" step="0.01" placeholder="Price"></div>
+            <div class="col-total-price"><input type="text" class="form-control form-control-sm total-price" readonly placeholder="Auto"></div>
+            <div class="col-remarks"><input type="text" class="form-control form-control-sm remarks-input" placeholder="Optional"></div>
+            <div class="col-action"><button class="btn btn-danger btn-sm remove-item">✕</button></div>
+        </div>
+    `;
+    container.appendChild(newItem);
+    setupRowEvents(newItem);
+    if (container.children.length > 1) {
+        var btns = document.querySelectorAll('.remove-item');
+        for (var i = 0; i < btns.length; i++) btns[i].disabled = false;
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showReturnDetails(orderId, orderItems, action) {
+    pendingOrderId = orderId;
+    pendingAction = action;
+    
+    modalTitle.innerHTML = action === 'Cancelled' ? '❌ Order Cancellation Details' : '↩️ Order Return Details';
+    
+    var totalItems = orderItems.length;
+    var totalQuantity = 0;
+    for (var i = 0; i < orderItems.length; i++) {
+        totalQuantity += orderItems[i].quantity;
+    }
+    
+    var html = '<div class="summary-box">';
+    html += '<strong>📋 Order Summary:</strong><br>';
+    html += '🆔 Order ID: <strong>' + escapeHtml(orderId) + '</strong><br>';
+    html += '📦 Total Items: <strong>' + totalItems + '</strong><br>';
+    html += '🔢 Total Quantity: <strong>' + totalQuantity + '</strong><br>';
+    html += '⚡ Action: <strong>' + (action === 'Cancelled' ? 'Cancel Order' : 'Return Order') + '</strong>';
+    html += '</div>';
+    
+    html += '<p><strong>📦 Items to be processed:</strong></p>';
+    html += '<div class="table-responsive">';
+    html += '<table class="return-items-table">';
+    html += '<thead>';
+    html += '<tr>';
+    html += '<th>#</th>';
+    html += '<th>SKU Code</th>';
+    html += '<th>Product Name</th>';
+    html += '<th>Quantity</th>';
+    html += '<th>📍 Original Bin</th>';
+    html += '<th>🏭 Warehouse</th>';
+    html += '<th>🔖 Batch No</th>';
+    html += '</tr>';
+    html += '</thead>';
+    html += '<tbody>';
+    
+    for (var i = 0; i < orderItems.length; i++) {
+        var item = orderItems[i];
+        html += '<tr>';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td>' + escapeHtml(item.sku_code) + '</td>';
+        html += '<td>' + escapeHtml(item.item_name) + '</td>';
+        html += '<td><strong>' + item.quantity + '</strong></td>';
+        html += '<td><span style="background:#dc3545; color:white; padding:2px 8px; border-radius:12px;">📦 ' + escapeHtml(item.bin_no) + '</span></td>';
+        html += '<td><span style="background:#17a2b8; color:white; padding:2px 8px; border-radius:12px;">🏭 ' + escapeHtml(item.warehouse_name) + '</span></td>';
+        html += '<td>' + escapeHtml(item.batch_number) + '</td>';
+        html += '</tr>';
+    }
+    
+    html += '</tbody>';
+    html += '</table>';
+    html += '</div>';
+    
+    html += '<div class="alert alert-warning mt-3" style="background-color: #fff3cd; border-left: 3px solid #ffc107;">';
+    html += '<strong>⚠️ Action Required:</strong><br>';
+    html += 'Please place the above items back to their respective <strong>Original Bins</strong> as mentioned in the table.';
+    html += '</div>';
+    
+    modalBody.innerHTML = html;
+    modal.style.display = 'block';
+}
+
+function closeModal() {
+    modal.style.display = 'none';
+    pendingOrderId = null;
+    pendingAction = null;
+}
+
+function executeStatusUpdate(orderId, newStatus) {
+    fetch('/api/orders/' + orderId + '/status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            alert('✅ Order ' + orderId + ' status updated to ' + newStatus);
+            loadOrders();
+            loadInventoryData();
+            loadExistingOrderIds();
+        } else {
+            alert('❌ ' + data.error);
+            loadOrders();
+        }
+    });
+}
+
+if (confirmBtn) confirmBtn.onclick = function() {
+    if (pendingOrderId) {
+        executeStatusUpdate(pendingOrderId, pendingAction);
+        closeModal();
+    }
+};
+if (cancelBtn) cancelBtn.onclick = closeModal;
+if (closeSpan) closeSpan.onclick = closeModal;
+window.onclick = function(event) {
+    if (event.target == modal) closeModal();
+};
+
+document.getElementById('addMoreItems').addEventListener('click', addMoreItems);
+
+$(document).on('click', '.remove-item', function() {
+    var container = document.getElementById('orderItemsContainer');
+    if (container.children.length > 1) {
+        $(this).closest('.order-item-row').remove();
+        var btns = document.querySelectorAll('.remove-item');
+        if (container.children.length === 1) {
+            for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+        }
+    }
+});
+
+// ========== FIXED: Create Order with ID validation ==========
+document.getElementById('createOrderBtn').addEventListener('click', function() {
+    var userOrderId = document.getElementById('orderId').value.trim();
+    var orderDate = document.getElementById('orderDate').value;
+    var businessType = document.getElementById('businessType').value;
+    var platformName = document.getElementById('platformName').value;
+    var paymentMode = document.getElementById('paymentMode').value;
+    var orderMsg = document.getElementById('orderMsg');
+    
+    if (!orderDate) { orderMsg.innerHTML = '<div class="alert alert-danger">❌ Please select Order Date</div>'; return; }
+    if (!businessType) { orderMsg.innerHTML = '<div class="alert alert-danger">❌ Please select Business Type</div>'; return; }
+    if (!platformName) { orderMsg.innerHTML = '<div class="alert alert-danger">❌ Please select Platform Name</div>'; return; }
+    
+    var items = [];
+    var valid = true;
+    var rows = document.querySelectorAll('.order-item-row');
+    
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var sku = row.querySelector('.sku-input').value.toUpperCase();
+        var bin = row.querySelector('.bin-select').value;
+        var batch = row.querySelector('.batch-select').value;
+        var orderQty = parseInt(row.querySelector('.order-qty').value) || 0;
+        var itemPrice = parseFloat(row.querySelector('.item-price').value) || 0;
+        var availableQty = parseInt(row.querySelector('.available-qty').value) || 0;
+        var itemName = row.querySelector('.item-name-display').value;
+        var remarks = row.querySelector('.remarks-input').value;
+        
+        if (!sku) { alert('❌ Please enter SKU for all items'); valid = false; break; }
+        if (!bin) { alert('❌ Please select Bin for all items'); valid = false; break; }
+        if (!batch) { alert('❌ Please select Batch for all items'); valid = false; break; }
+        if (orderQty <= 0) { alert('❌ Please enter valid quantity for all items'); valid = false; break; }
+        if (orderQty > availableQty) { alert('❌ Only ' + availableQty + ' units available for ' + sku); valid = false; break; }
+        if (itemPrice <= 0) { alert('❌ Please enter valid price for all items'); valid = false; break; }
+        
+        items.push({ 
+            sku_code: sku, batch_number: batch, bin_no: bin, warehouse_name: currentLocation,
+            quantity: orderQty, item_price: itemPrice, total_price: orderQty * itemPrice,
+            item_name: itemName, remarks: remarks 
+        });
+    }
+    
+    if (!valid) return;
+    
+    // ========== FIXED: Generate unique order ID if user provided ID exists ==========
+    var finalOrderId;
+    if (userOrderId) {
+        // Check if the user-provided ID already exists in our loaded set
+        if (existingOrderIds.has(userOrderId)) {
+            orderMsg.innerHTML = '<div class="alert alert-danger">❌ Order ID "' + userOrderId + '" already exists! Please use a different Order ID or leave empty for auto-generation.</div>';
+            return;
+        }
+        finalOrderId = userOrderId;
+    } else {
+        finalOrderId = generateUniqueOrderId();
+    }
+    
+    console.log("Creating order with ID:", finalOrderId);
+    orderMsg.innerHTML = '<div class="alert alert-info">⏳ Creating order...</div>';
+    
+    fetch('/api/orders/advanced', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            order_id: finalOrderId, order_date: orderDate,
+            business_type: businessType, platform_name: platformName,
+            payment_mode: paymentMode, items: items 
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            orderMsg.innerHTML = '<div class="alert alert-success">✅ Order created! ID: ' + data.order_id + '</div>';
+            // Add to existing IDs set
+            existingOrderIds.add(data.order_id);
+            document.getElementById('orderId').value = '';
+            setDefaultOrderDate();
+            document.getElementById('businessType').value = '';
+            document.getElementById('platformName').value = '';
+            document.getElementById('paymentMode').value = 'Cash On Delivery';
+            
+            var container = document.getElementById('orderItemsContainer');
+            var firstRow = container.querySelector('.order-item-row');
+            if (firstRow) {
+                firstRow.querySelector('.sku-input').value = '';
+                firstRow.querySelector('.item-name-display').value = '';
+                firstRow.querySelector('.bin-select').innerHTML = '<option value="">Select SKU first</option>';
+                firstRow.querySelector('.bin-select').disabled = true;
+                firstRow.querySelector('.batch-select').innerHTML = '<option value="">Select Bin first</option>';
+                firstRow.querySelector('.batch-select').disabled = true;
+                firstRow.querySelector('.available-qty').value = '';
+                firstRow.querySelector('.order-qty').value = '';
+                firstRow.querySelector('.item-price').value = '';
+                firstRow.querySelector('.total-price').value = '';
+                firstRow.querySelector('.remarks-input').value = '';
+            }
+            while (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            document.querySelector('.remove-item').disabled = true;
+            loadOrders();
+            loadInventoryData();
+            loadExistingOrderIds();
+            setTimeout(function() { orderMsg.innerHTML = ''; }, 5000);
+        } else {
+            orderMsg.innerHTML = '<div class="alert alert-danger">❌ ' + data.error + '</div>';
+        }
+    })
+    .catch(function(error) {
+        console.error("Error:", error);
+        orderMsg.innerHTML = '<div class="alert alert-danger">❌ Error: ' + error.message + '</div>';
+    });
+});
+
+function isValidStatusTransition(currentStatus, newStatus) {
+    if (newStatus === 'Cancelled') {
+        if (currentStatus === 'Returned') return { valid: false, message: '❌ Cannot cancel a returned order!' };
+        return { valid: true, message: '' };
+    }
+    if (newStatus === 'Returned') {
+        if (currentStatus === 'Created') return { valid: false, message: '❌ Cannot return a Created order!' };
+        if (currentStatus === 'Returned') return { valid: false, message: '❌ Already returned!' };
+        if (currentStatus === 'Cancelled') return { valid: false, message: '❌ Cannot return a cancelled order!' };
+        return { valid: true, message: '' };
+    }
+    if (newStatus === 'Invoiced') {
+        if (currentStatus === 'Created') return { valid: true, message: '' };
+        return { valid: false, message: '❌ Only Created orders can be Invoiced!' };
+    }
+    if (newStatus === 'Shipped') {
+        if (currentStatus === 'Invoiced') return { valid: true, message: '' };
+        return { valid: false, message: '❌ Only Invoiced orders can be Shipped!' };
+    }
+    return { valid: false, message: '❌ Invalid transition!' };
+}
+
+function updateBatchButton() {
+    selectedOrders.clear();
+    var checkboxes = document.querySelectorAll('.order-select-checkbox:checked');
+    for (var i = 0; i < checkboxes.length; i++) {
+        selectedOrders.add(checkboxes[i].getAttribute('data-order-id'));
+    }
+    var count = selectedOrders.size;
+    var selectedSpan = document.getElementById('selectedCount');
+    var batchBtn = document.getElementById('batchUpdateBtn');
+    var batchDiv = document.getElementById('batchActions');
+    if (selectedSpan) selectedSpan.innerText = count;
+    if (batchBtn) batchBtn.disabled = count === 0;
+    if (batchDiv) batchDiv.style.display = count > 0 ? 'block' : 'none';
+    if (batchBtn) batchBtn.innerHTML = '📦 Update Selected (' + count + ')';
+}
+
+function loadOrders() {
+    fetch('/api/orders')
+        .then(function(response) { return response.json(); })
+        .then(function(orders) {
+            var searchTerm = document.getElementById('searchOrder').value;
+            var statusFilter = document.getElementById('statusFilter').value;
+            
+            if (searchTerm) orders = orders.filter(function(o) { return o.order_id.toLowerCase().includes(searchTerm.toLowerCase()); });
+            if (statusFilter) orders = orders.filter(function(o) { return o.order_status === statusFilter; });
+            
+            var ordersDiv = document.getElementById('ordersList');
+            if (orders.length === 0) {
+                ordersDiv.innerHTML = '<div class="alert alert-info text-center">No orders found</div>';
+                return;
+            }
+            
+            var html = '';
+            for (var i = 0; i < orders.length; i++) {
+                var order = orders[i];
+                var statusClass = 'status-' + order.order_status.toLowerCase();
+                var canSelect = order.order_status !== 'Returned' && order.order_status !== 'Cancelled';
+                
+                html += `
+                    <div class="card order-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <input type="checkbox" class="order-select-checkbox" data-order-id="${order.order_id}" data-order-status="${order.order_status}" ${!canSelect ? 'disabled' : ''}>
+                                    <h6 class="mb-1">Order ID: <strong>${order.order_id}</strong></h6>
+                                    <small class="text-muted">📅 ${order.order_date || order.created_on.split(' ')[0]} | 🕐 ${order.created_on} | 👤 ${order.created_by || 'admin'}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="order-status ${statusClass}">${order.order_status}</span>
+                                    <select class="form-select form-select-sm mt-2 status-update" data-order-id="${order.order_id}" data-current-status="${order.order_status}" style="width: 130px;">
+                                        <option value="">Change Status</option>
+                                        <option value="Invoiced">📄 Invoiced</option>
+                                        <option value="Shipped">🚚 Shipped</option>
+                                        <option value="Returned">↩️ Returned</option>
+                                        <option value="Cancelled">❌ Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <strong>Items:</strong>
+                `;
+                
+                for (var j = 0; j < order.items.length; j++) {
+                    var item = order.items[j];
+                    var binNo = item.bin_no || 'Not specified';
+                    var warehouse = item.warehouse_name || 'Manak Vihar';
+                    var batchNo = item.batch_number || 'Not specified';
+                    var formattedPrice = formatPrice(item.sale_value / item.quantity);
+                    
+                    html += `
+                        <div class="order-item-line">
+                            <span class="item-detail-text">
+                                <span class="item-label">SKU:</span> ${escapeHtml(item.sku_code)} &nbsp;&nbsp;|&nbsp;&nbsp;
+                                <span class="item-label">Product:</span> ${escapeHtml(item.item_name)} &nbsp;&nbsp;|&nbsp;&nbsp;
+                                <span class="item-label">Qty:</span> ${item.quantity} &nbsp;&nbsp;|&nbsp;&nbsp;
+                                <span class="item-label">Price:</span> ₹${formattedPrice} &nbsp;&nbsp;|&nbsp;&nbsp;
+                                <span class="item-label">📍 Original Bin:</span> <span class="bin-badge">📦 ${escapeHtml(binNo)}</span> &nbsp;&nbsp;
+                                <span class="item-label">🏭 Warehouse:</span> <span class="warehouse-badge">🏭 ${escapeHtml(warehouse)}</span> &nbsp;&nbsp;
+                                <span class="item-label">🔖 Batch No:</span> ${escapeHtml(batchNo)}
+                            </span>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            ordersDiv.innerHTML = html;
+            updateBatchButton();
+        });
+}
+
+document.addEventListener('change', function(e) {
+    if (e.target.classList && e.target.classList.contains('order-select-checkbox')) updateBatchButton();
+});
+
+document.addEventListener('change', function(e) {
+    if (e.target.classList && e.target.classList.contains('status-update')) {
+        var orderId = e.target.getAttribute('data-order-id');
+        var currentStatus = e.target.getAttribute('data-current-status');
+        var newStatus = e.target.value;
+        if (!newStatus) return;
+        
+        var validation = isValidStatusTransition(currentStatus, newStatus);
+        if (!validation.valid) {
+            alert(validation.message);
+            e.target.value = '';
+            loadOrders();
+            return;
+        }
+        
+        if (newStatus === 'Cancelled' || newStatus === 'Returned') {
+            fetch('/api/orders')
+                .then(function(response) { return response.json(); })
+                .then(function(orders) {
+                    var order = null;
+                    for (var i = 0; i < orders.length; i++) {
+                        if (orders[i].order_id === orderId) { 
+                            order = orders[i]; 
+                            break; 
+                        }
+                    }
+                    if (order && order.items) {
+                        var itemsWithBin = [];
+                        for (var i = 0; i < order.items.length; i++) {
+                            itemsWithBin.push({
+                                sku_code: order.items[i].sku_code,
+                                item_name: order.items[i].item_name,
+                                quantity: order.items[i].quantity,
+                                bin_no: order.items[i].bin_no || 'Original Bin',
+                                batch_number: order.items[i].batch_number || 'N/A',
+                                warehouse_name: order.items[i].warehouse_name || currentLocation
+                            });
+                        }
+                        showReturnDetails(orderId, itemsWithBin, newStatus);
+                    } else {
+                        executeStatusUpdate(orderId, newStatus);
+                    }
+                });
+        } else {
+            executeStatusUpdate(orderId, newStatus);
+        }
+        e.target.value = '';
+    }
+});
+
+document.getElementById('applyBatchBtn').addEventListener('click', function() {
+    var newStatus = document.getElementById('batchStatusSelect').value;
+    if (!newStatus) { alert('Please select an action!'); return; }
+    if (newStatus === 'Cancelled' || newStatus === 'Returned') {
+        alert('⚠️ Please process individually for cancel/return');
+        return;
+    }
+    var ordersToUpdate = Array.from(selectedOrders);
+    if (!confirm('Update ' + ordersToUpdate.length + ' orders to "' + newStatus + '"?')) return;
+    
+    var completed = 0, failed = [];
+    for (var i = 0; i < ordersToUpdate.length; i++) {
+        (function(orderId) {
+            fetch('/api/orders/' + orderId + '/status', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success) completed++;
+                else failed.push(orderId);
+                if (completed + failed.length === ordersToUpdate.length) {
+                    alert('✅ Updated: ' + completed + ' orders\n❌ Failed: ' + failed.length);
+                    loadOrders();
+                    loadInventoryData();
+                }
+            });
+        })(ordersToUpdate[i]);
+    }
+});
+
+document.getElementById('searchOrder').addEventListener('keyup', function() { loadOrders(); });
+document.getElementById('statusFilter').addEventListener('change', function() { loadOrders(); });
+
+async function init() {
+    setDefaultOrderDate();
+    await loadExistingOrderIds();
+    await loadInventoryData();
+    loadOrders();
+    var firstRow = document.querySelector('.order-item-row');
+    if (firstRow) setupRowEvents(firstRow);
+    document.querySelector('.remove-item').disabled = true;
+}
+init();
+</script>
+{% endblock %}

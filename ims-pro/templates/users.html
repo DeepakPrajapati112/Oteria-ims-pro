@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<style>
+    .user-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+    .user-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -20px -20px 20px -20px;
+    }
+    .role-badge-admin {
+        background: #dc3545;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+    }
+    .role-badge-user {
+        background: #28a745;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+    }
+    .user-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .user-table th {
+        background-color: #343a40;
+        color: white;
+        padding: 10px;
+        text-align: left;
+    }
+    .user-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+    .user-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    .action-btns .btn {
+        margin: 2px;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    .modal-backdrop {
+        z-index: 1040;
+    }
+</style>
+
+<h2>👥 User Management</h2>
+
+<div class="row mt-4">
+    <!-- Add User Form -->
+    <div class="col-md-5">
+        <div class="user-card">
+            <div class="user-header">
+                <h5 class="mb-0">➕ Add New User</h5>
+            </div>
+            <div class="card-body">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label>Username *</label>
+                        <input type="text" class="form-control" id="username" required placeholder="Enter username">
+                        <small class="text-muted">Username will be used for login</small>
+                    </div>
+                    <div class="mb-3">
+                        <label>Full Name</label>
+                        <input type="text" class="form-control" id="fullname" placeholder="Enter full name">
+                    </div>
+                    <div class="mb-3">
+                        <label>Password *</label>
+                        <input type="password" class="form-control" id="password" required placeholder="Enter password">
+                    </div>
+                    <div class="mb-3">
+                        <label>Confirm Password *</label>
+                        <input type="password" class="form-control" id="confirmPassword" required placeholder="Confirm password">
+                    </div>
+                    <div class="mb-3">
+                        <label>Role</label>
+                        <select class="form-control" id="role">
+                            <option value="user">👤 User - Basic Access</option>
+                            <option value="admin">👑 Admin - Full Access</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Email (Optional)</label>
+                        <input type="email" class="form-control" id="email" placeholder="user@example.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">➕ Add User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Users List -->
+    <div class="col-md-7">
+        <div class="user-card">
+            <div class="user-header">
+                <h5 class="mb-0">📋 Existing Users</h5>
+            </div>
+            <div class="card-body">
+                <div id="usersList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Role Modal -->
+<div class="modal fade" id="editRoleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">✏️ Edit User Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUserId">
+                <div class="mb-3">
+                    <label>Username</label>
+                    <input type="text" class="form-control" id="editUsername" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Current Role</label>
+                    <input type="text" class="form-control" id="editCurrentRole" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>New Role</label>
+                    <select class="form-control" id="editNewRole">
+                        <option value="user">👤 User - Basic Access</option>
+                        <option value="admin">👑 Admin - Full Access</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveRoleBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">🔑 Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="resetUserId">
+                <div class="mb-3">
+                    <label>Username</label>
+                    <input type="text" class="form-control" id="resetUsername" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>New Password</label>
+                    <input type="password" class="form-control" id="newPassword" required placeholder="Enter new password">
+                </div>
+                <div class="mb-3">
+                    <label>Confirm New Password</label>
+                    <input type="password" class="form-control" id="confirmNewPassword" required placeholder="Confirm new password">
+                </div>
+            </div>
+            《
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="savePasswordBtn">Reset Password</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Details Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">✏️ Edit User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editDetailsUserId">
+                <div class="mb-3">
+                    <label>Username</label>
+                    <input type="text" class="form-control" id="editDetailsUsername" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Full Name</label>
+                    <input type="text" class="form-control" id="editDetailsFullname" placeholder="Enter full name">
+                </div>
+                <div class="mb-3">
+                    <label>Email</label>
+                    <input type="email" class="form-control" id="editDetailsEmail" placeholder="user@example.com">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" id="saveDetailsBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadUsers() {
+    $.get('/api/users', function(users) {
+        let html = '<div class="table-responsive">';
+        html += '<table class="user-table">';
+        html += '<thead>';
+        html += '<tr>';
+        html += '<th>Username</th>';
+        html += '<th>Full Name</th>';
+        html += '<th>Email</th>';
+        html += '<th>Role</th>';
+        html += '<th>Created</th>';
+        html += '<th>Actions</th>';
+        html += '</tr>';
+        html += '</thead><tbody>';
+        
+        users.forEach(function(user) {
+            let roleClass = user.role == 'admin' ? 'role-badge-admin' : 'role-badge-user';
+            let roleText = user.role == 'admin' ? '👑 Admin' : '👤 User';
+            
+            html += '<tr>';
+            html += '<td><strong>' + escapeHtml(user.username) + '</strong></td>';
+            html += '<td>' + escapeHtml(user.full_name || '-') + '</td>';
+            html += '<td>' + escapeHtml(user.email || '-') + '</td>';
+            html += '<td><span class="' + roleClass + '">' + roleText + '</span></td>';
+            html += '<td><small>' + (user.created_at || '-') + '</small></td>';
+            html += '<td class="action-btns">';
+            html += '<button class="btn btn-sm btn-info edit-user" data-id="' + user.id + '" data-username="' + escapeHtml(user.username) + '" data-fullname="' + escapeHtml(user.full_name || '') + '" data-email="' + escapeHtml(user.email || '') + '">✏️ Edit</button>';
+            html += '<button class="btn btn-sm btn-warning reset-password" data-id="' + user.id + '" data-username="' + escapeHtml(user.username) + '">🔑 Reset</button>';
+            
+            if (user.role != 'admin') {
+                html += '<button class="btn btn-sm btn-primary change-role" data-id="' + user.id + '" data-username="' + escapeHtml(user.username) + '" data-role="' + user.role + '">👔 Role</button>';
+            }
+            
+            if (user.username != 'admin') {
+                html += '<button class="btn btn-sm btn-danger delete-user" data-id="' + user.id + '" data-username="' + escapeHtml(user.username) + '">🗑 Delete</button>';
+            } else {
+                html += '<span class="text-muted ms-2">(Protected)</span>';
+            }
+            
+            html += '</td>';
+            html += '</tr>';
+        });
+        
+        html += '</tbody>';
+        html += '</table>';
+        html += '</div>';
+        $('#usersList').html(html);
+    }).fail(function() {
+        $('#usersList').html('<div class="alert alert-danger">Failed to load users. Please refresh the page.</div>');
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Add User Form Submit
+$('#addUserForm').submit(function(e) {
+    e.preventDefault();
+    
+    let password = $('#password').val();
+    let confirmPassword = $('#confirmPassword').val();
+    
+    if (password !== confirmPassword) {
+        alert('❌ Passwords do not match!');
+        return;
+    }
+    
+    if (password.length < 4) {
+        alert('❌ Password must be at least 4 characters long!');
+        return;
+    }
+    
+    let data = {
+        username: $('#username').val().trim(),
+        full_name: $('#fullname').val().trim(),
+        password: password,
+        role: $('#role').val(),
+        email: $('#email').val().trim()
+    };
+    
+    if (!data.username) {
+        alert('❌ Username is required!');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/users',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            alert('✅ ' + response.message);
+            $('#addUserForm')[0].reset();
+            loadUsers();
+        },
+        error: function(xhr) {
+            let errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error';
+            alert('❌ Error: ' + errorMsg);
+        }
+    });
+});
+
+// Delete User
+$(document).on('click', '.delete-user', function() {
+    let id = $(this).data('id');
+    let username = $(this).data('username');
+    
+    if(confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+        $.ajax({
+            url: `/api/users/${id}`,
+            method: 'DELETE',
+            success: function(response) {
+                alert('✅ ' + (response.message || 'User deleted successfully'));
+                loadUsers();
+            },
+            error: function(xhr) {
+                let errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error';
+                alert('❌ Error: ' + errorMsg);
+            }
+        });
+    }
+});
+
+// Edit User Details
+$(document).on('click', '.edit-user', function() {
+    let id = $(this).data('id');
+    let username = $(this).data('username');
+    let fullname = $(this).data('fullname');
+    let email = $(this).data('email');
+    
+    $('#editDetailsUserId').val(id);
+    $('#editDetailsUsername').val(username);
+    $('#editDetailsFullname').val(fullname);
+    $('#editDetailsEmail').val(email);
+    
+    $('#editUserModal').modal('show');
+});
+
+$('#saveDetailsBtn').click(function() {
+    let id = $('#editDetailsUserId').val();
+    let data = {
+        full_name: $('#editDetailsFullname').val(),
+        email: $('#editDetailsEmail').val()
+    };
+    
+    $.ajax({
+        url: `/api/users/${id}/details`,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            alert('✅ ' + response.message);
+            $('#editUserModal').modal('hide');
+            loadUsers();
+        },
+        error: function(xhr) {
+            let errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error';
+            alert('❌ Error: ' + errorMsg);
+        }
+    });
+});
+
+// Change Role
+$(document).on('click', '.change-role', function() {
+    let id = $(this).data('id');
+    let username = $(this).data('username');
+    let currentRole = $(this).data('role');
+    
+    $('#editUserId').val(id);
+    $('#editUsername').val(username);
+    $('#editCurrentRole').val(currentRole);
+    $('#editNewRole').val(currentRole);
+    
+    $('#editRoleModal').modal('show');
+});
+
+$('#saveRoleBtn').click(function() {
+    let id = $('#editUserId').val();
+    let newRole = $('#editNewRole').val();
+    
+    $.ajax({
+        url: `/api/users/${id}/role`,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({ role: newRole }),
+        success: function(response) {
+            alert('✅ ' + response.message);
+            $('#editRoleModal').modal('hide');
+            loadUsers();
+        },
+        error: function(xhr) {
+            let errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error';
+            alert('❌ Error: ' + errorMsg);
+        }
+    });
+});
+
+// Reset Password
+$(document).on('click', '.reset-password', function() {
+    let id = $(this).data('id');
+    let username = $(this).data('username');
+    
+    $('#resetUserId').val(id);
+    $('#resetUsername').val(username);
+    $('#newPassword').val('');
+    $('#confirmNewPassword').val('');
+    
+    $('#resetPasswordModal').modal('show');
+});
+
+$('#savePasswordBtn').click(function() {
+    let id = $('#resetUserId').val();
+    let newPassword = $('#newPassword').val();
+    let confirmPassword = $('#confirmNewPassword').val();
+    
+    if (newPassword !== confirmPassword) {
+        alert('❌ Passwords do not match!');
+        return;
+    }
+    
+    if (newPassword.length < 4) {
+        alert('❌ Password must be at least 4 characters long!');
+        return;
+    }
+    
+    $.ajax({
+        url: `/api/users/${id}/password`,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({ password: newPassword }),
+        success: function(response) {
+            alert('✅ ' + response.message);
+            $('#resetPasswordModal').modal('hide');
+        },
+        error: function(xhr) {
+            let errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error';
+            alert('❌ Error: ' + errorMsg);
+        }
+    });
+});
+
+loadUsers();
+</script>
+{% endblock %}

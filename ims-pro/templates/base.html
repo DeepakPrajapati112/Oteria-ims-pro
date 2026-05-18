@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: white;
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 10px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            transform: translateX(5px);
+        }
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        .main-content {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .navbar-custom {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 8px 20px;
+        }
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .location-selector {
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 10px;
+            margin: 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .location-selector label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 5px;
+            display: block;
+        }
+        .location-selector select {
+            background: rgba(255,255,255,0.95);
+            border: none;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 13px;
+            width: 100%;
+            color: #333;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        /* ========== TOP RIGHT LOCATION DROPDOWN STYLES ========== */
+        .location-dropdown-container {
+            position: relative;
+            margin-right: 15px;
+        }
+        
+        .location-dropdown-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 30px;
+            padding: 6px 15px;
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .location-dropdown-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .location-dropdown-btn i {
+            font-size: 12px;
+        }
+        
+        .location-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 5px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            min-width: 180px;
+            z-index: 1000;
+            display: none;
+            overflow: hidden;
+        }
+        
+        .location-dropdown-menu.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .location-dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 13px;
+            color: #333;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .location-dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .location-dropdown-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .location-dropdown-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .location-dropdown-item i {
+            margin-right: 8px;
+            font-size: 12px;
+        }
+        
+        /* Role badge */
+        .role-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* User info in sidebar */
+        .user-info {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        .user-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+        }
+        .user-fullname {
+            font-size: 11px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 p-0 sidebar">
+                <div class="text-center py-3">
+                    <h4 class="text-white logo-text">IMS Pro</h4>
+                    <small class="text-white-50">Welcome, {{ user.username }}</small>
+                </div>
+                
+                <!-- User Info -->
+                {% if user.full_name %}
+                <div class="user-info">
+                    <div class="user-name">
+                        <i class="bi bi-person-circle"></i> {{ user.full_name }}
+                    </div>
+                    {% if user.email %}
+                    <div class="user-fullname">
+                        <i class="bi bi-envelope"></i> {{ user.email }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Sidebar Location Selector (hidden on desktop, kept for mobile) -->
+                <div class="location-selector d-md-none">
+                    <label><i class="bi bi-geo-alt-fill"></i> Current Location</label>
+                    <select id="mobileLocationSelect" class="form-select form-select-sm">
+                        <option value="Manak_Vihar">Manak_Vihar</option>
+                        <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                    </select>
+                </div>
+                
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a class="nav-link" href="{{ url_for('orders') }}">
+                        <i class="bi bi-cart"></i> Order Management
+                    </a>
+                    <a class="nav-link" href="{{ url_for('inventory') }}">
+                        <i class="bi bi-box-seam"></i> Inventory Management
+                    </a>
+                    <a class="nav-link" href="{{ url_for('stock_transfer') }}">
+                        <i class="bi bi-arrow-left-right"></i> Stock Transfer
+                    </a>
+                    <a class="nav-link" href="{{ url_for('grn') }}">
+                        <i class="bi bi-receipt"></i> Goods Receive Note
+                    </a>
+                    <a class="nav-link" href="{{ url_for('reports') }}">
+                        <i class="bi bi-file-text"></i> Reports
+                    </a>
+                    {% if user.role == 'admin' %}
+                    <a class="nav-link" href="{{ url_for('users') }}">
+                        <i class="bi bi-people"></i> Users
+                    </a>
+                    <a class="nav-link" href="{{ url_for('transactions') }}">
+                        <i class="bi bi-clock-history"></i> Transaction History
+                    </a>
+                    {% endif %}
+                    <a class="nav-link" href="{{ url_for('logout') }}">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 p-0 main-content">
+                <nav class="navbar navbar-custom">
+                    <div class="navbar-brand">
+                        <h5 class="mb-0">{% block title %}Dashboard{% endblock %}</h5>
+                    </div>
+                    <div class="ms-auto d-flex align-items-center">
+                        <!-- ========== LOCATION DROPDOWN IN TOP RIGHT CORNER ========== -->
+                        <div class="location-dropdown-container">
+                            <button class="location-dropdown-btn" id="locationDropdownBtn">
+                                <i class="bi bi-geo-alt-fill"></i>
+                                <span id="selectedLocationText">Kaushambi, Ghaziabad</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                            <div class="location-dropdown-menu" id="locationDropdownMenu">
+                                <div class="location-dropdown-item" data-location="Manak_Vihar">
+                                    <i class="bi bi-building"></i> Manak_Vihar
+                                </div>
+                                <div class="location-dropdown-item" data-location="Kaushambi">
+                                    <i class="bi bi-geo-alt"></i> Kaushambi, Ghaziabad
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Role Badge -->
+                        <span class="role-badge">{{ user.role|upper }}</span>
+                    </div>
+                </nav>
+                <div class="p-4">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // Global Location Management
+    function getCurrentLocation() {
+        return localStorage.getItem('globalLocation') || 'Kaushambi';
+    }
+    
+    function setCurrentLocation(location) {
+        localStorage.setItem('globalLocation', location);
+        updateAllLocationDisplays(location);
+        window.dispatchEvent(new CustomEvent('locationChanged', { detail: { location: location } }));
+    }
+    
+    function updateAllLocationDisplays(location) {
+        // Update top right button text
+        var locationText = location === 'Manak_Vihar' ? 'Manak_Vihar' : 'Kaushambi, Ghaziabad';
+        var selectedTextSpan = document.getElementById('selectedLocationText');
+        if (selectedTextSpan) {
+            selectedTextSpan.innerText = locationText;
+        }
+        
+        // Update mobile select if exists
+        var mobileSelect = document.getElementById('mobileLocationSelect');
+        if (mobileSelect) {
+            mobileSelect.value = location;
+        }
+        
+        // Update active class in dropdown
+        document.querySelectorAll('.location-dropdown-item').forEach(function(item) {
+            if (item.getAttribute('data-location') === location) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+    
+    // Toggle dropdown
+    document.addEventListener('DOMContentLoaded', function() {
+        var savedLocation = getCurrentLocation();
+        updateAllLocationDisplays(savedLocation);
+        
+        // Top right dropdown button click
+        var dropdownBtn = document.getElementById('locationDropdownBtn');
+        var dropdownMenu = document.getElementById('locationDropdownMenu');
+        
+        if (dropdownBtn) {
+            dropdownBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('show');
+            });
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+            if (dropdownMenu) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+        
+        if (dropdownMenu) {
+            dropdownMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+        
+        // Location dropdown items click
+        document.querySelectorAll('.location-dropdown-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var newLocation = this.getAttribute('data-location');
+                if (newLocation && newLocation !== getCurrentLocation()) {
+                    setCurrentLocation(newLocation);
+                    location.reload();
+                }
+                if (dropdownMenu) {
+                    dropdownMenu.classList.remove('show');
+                }
+            });
+        });
+        
+        // Mobile select change
+        var mobileSelect = document.getElementById('mobileLocationSelect');
+        if (mobileSelect) {
+            mobileSelect.addEventListener('change', function() {
+                var newLocation = this.value;
+                setCurrentLocation(newLocation);
+                location.reload();
+            });
+        }
+    });
+    
+    window.getCurrentLocationForAPI = function() {
+        return getCurrentLocation();
+    };
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

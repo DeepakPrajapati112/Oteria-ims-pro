@@ -1,0 +1,732 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -20px -20px 20px -20px;
+    }
+    .btn-download {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 500;
+    }
+    .btn-download:hover {
+        background-color: #218838;
+        transform: translateY(-1px);
+    }
+    .btn-generate {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 500;
+    }
+    .btn-generate:hover {
+        background-color: #0056b3;
+        transform: translateY(-1px);
+    }
+    .filter-row {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+    .filter-group label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #555;
+    }
+    .filter-group input, .filter-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    .table-responsive {
+        overflow-x: auto;
+        max-height: 500px;
+    }
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        padding: 10px;
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+        white-space: nowrap;
+        color: #333;
+        font-weight: 600;
+    }
+    .table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #dee2e6;
+        white-space: nowrap;
+    }
+    .table tr:hover {
+        background-color: #f5f5f5;
+    }
+    .summary-stats {
+        background: #e9ecef;
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        display: inline-block;
+    }
+    .nav-tabs .nav-link {
+        color: #667eea;
+        font-weight: 500;
+    }
+    .nav-tabs .nav-link.active {
+        background-color: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    .badge-status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .badge-shipped { background-color: #d4edda; color: #155724; }
+    .badge-created { background-color: #d1ecf1; color: #0c5460; }
+    .badge-invoiced { background-color: #fff3cd; color: #856404; }
+    .badge-returned { background-color: #f8d7da; color: #721c24; }
+    .badge-cancelled { background-color: #f8d7da; color: #721c24; }
+    .bin-chip {
+        background: #667eea;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 15px;
+        font-size: 11px;
+        display: inline-block;
+    }
+</style>
+
+<h2>📊 Reports Dashboard</h2>
+
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#salesReport">📈 Sales Report</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#returnReport">↩️ Return Report</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#cancelledReport">❌ Cancelled Report</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#expiryAlert">⚠️ Expiry Alert (6 months)</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#expiredStock">📦 Expired Stock</a>
+    </li>
+</ul>
+
+<div class="tab-content mt-3">
+    
+    <!-- ==================== SALES REPORT TAB ==================== -->
+    <div class="tab-pane fade show active" id="salesReport">
+        <div class="report-card">
+            <div class="report-header">
+                📈 Sales Report
+            </div>
+            <div class="report-body">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" id="salesStart">
+                    </div>
+                    <div class="filter-group">
+                        <label>End Date</label>
+                        <input type="date" class="form-control" id="salesEnd">
+                    </div>
+                    <div class="filter-group">
+                        <label>Warehouse</label>
+                        <select class="form-control" id="salesWarehouse">
+                            <option value="">All Warehouses</option>
+                            <option value="Manak_Vihar">Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-generate w-100" id="loadSalesReport">📊 Generate</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-download w-100" id="downloadSalesReport">📥 Download CSV</button>
+                    </div>
+                </div>
+                <div id="salesSummary" class="summary-stats" style="display: none;"></div>
+                <div id="salesTable" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ==================== RETURN REPORT TAB ==================== -->
+    <div class="tab-pane fade" id="returnReport">
+        <div class="report-card">
+            <div class="report-header">
+                ↩️ Return Report
+            </div>
+            <div class="report-body">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" id="returnStart">
+                    </div>
+                    <div class="filter-group">
+                        <label>End Date</label>
+                        <input type="date" class="form-control" id="returnEnd">
+                    </div>
+                    <div class="filter-group">
+                        <label>Warehouse</label>
+                        <select class="form-control" id="returnWarehouse">
+                            <option value="">All Warehouses</option>
+                            <option value="Manak_Vihar">Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-generate w-100" id="loadReturnReport">📊 Generate</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-download w-100" id="downloadReturnReport">📥 Download CSV</button>
+                    </div>
+                </div>
+                <div id="returnSummary" class="summary-stats" style="display: none;"></div>
+                <div id="returnTable" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ==================== CANCELLED REPORT TAB ==================== -->
+    <div class="tab-pane fade" id="cancelledReport">
+        <div class="report-card">
+            <div class="report-header">
+                ❌ Cancelled Orders Report
+            </div>
+            <div class="report-body">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" id="cancelledStart">
+                    </div>
+                    <div class="filter-group">
+                        <label>End Date</label>
+                        <input type="date" class="form-control" id="cancelledEnd">
+                    </div>
+                    <div class="filter-group">
+                        <label>Warehouse</label>
+                        <select class="form-control" id="cancelledWarehouse">
+                            <option value="">All Warehouses</option>
+                            <option value="Manak_Vihar">Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-generate w-100" id="loadCancelledReport">📊 Generate</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-download w-100" id="downloadCancelledReport">📥 Download CSV</button>
+                    </div>
+                </div>
+                <div id="cancelledSummary" class="summary-stats" style="display: none;"></div>
+                <div id="cancelledTable" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ==================== EXPIRY ALERT TAB ==================== -->
+    <div class="tab-pane fade" id="expiryAlert">
+        <div class="report-card">
+            <div class="report-header">
+                ⚠️ Products Expiring Within 6 Months
+            </div>
+            <div class="report-body">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Warehouse</label>
+                        <select class="form-control" id="expiryWarehouse">
+                            <option value="">All Warehouses</option>
+                            <option value="Manak_Vihar">Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-generate" id="refreshExpiry">🔄 Refresh</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-download" id="downloadExpiryReport">📥 Download CSV</button>
+                    </div>
+                </div>
+                <div id="expiryAlertTable" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ==================== EXPIRED STOCK TAB ==================== -->
+    <div class="tab-pane fade" id="expiredStock">
+        <div class="report-card">
+            <div class="report-header">
+                📦 Expired Stock
+            </div>
+            <div class="report-body">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Warehouse</label>
+                        <select class="form-control" id="expiredWarehouse">
+                            <option value="">All Warehouses</option>
+                            <option value="Manak_Vihar">Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-generate" id="refreshExpired">🔄 Refresh</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-download" id="downloadExpiredReport">📥 Download CSV</button>
+                    </div>
+                </div>
+                <div id="expiredTable" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+// Get current location from global storage
+var currentLocation = localStorage.getItem('globalLocation') || 'Manak_Vihar';
+
+// Helper function to escape CSV fields
+function escapeCSV(field) {
+    if (field === undefined || field === null) return '';
+    var stringField = String(field);
+    if (stringField.includes(',') || stringField.includes('\n') || stringField.includes('"')) {
+        stringField = stringField.replace(/"/g, '""');
+        return '"' + stringField + '"';
+    }
+    return stringField;
+}
+
+// Helper function to download CSV
+function downloadCSV(data, filename) {
+    var blob = new Blob(["\uFEFF" + data], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+function getStatusBadge(status) {
+    var badges = {
+        'Shipped': 'badge-shipped',
+        'Created': 'badge-created',
+        'Invoiced': 'badge-invoiced',
+        'Returned': 'badge-returned',
+        'Cancelled': 'badge-cancelled'
+    };
+    return '<span class="badge-status ' + (badges[status] || 'badge-created') + '">' + status + '</span>';
+}
+
+function calculateShelfLife(expiryDate) {
+    if(!expiryDate || expiryDate === '') return { text: 'No expiry date', percentage: 0 };
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var expDate = new Date(expiryDate);
+    expDate.setHours(0, 0, 0, 0);
+    if(expDate < today) {
+        var daysOverdue = Math.floor((today - expDate) / (1000 * 60 * 60 * 24));
+        return { text: 'Expired (' + daysOverdue + ' days ago)', percentage: 0 };
+    }
+    var daysLeft = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
+    var months = Math.floor(daysLeft / 30);
+    var days = daysLeft % 30;
+    var percentage = Math.min(Math.round((daysLeft / 365) * 100), 100);
+    var text = '';
+    if(months > 0 && days > 0) text = months + ' months ' + days + ' days';
+    else if(months > 0) text = months + ' months';
+    else text = days + ' days';
+    return { text: text, percentage: percentage };
+}
+
+function setDefaultDates() {
+    var today = new Date();
+    var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    var formatDate = function(date) { return date.toISOString().split('T')[0]; };
+    document.getElementById('salesStart').value = formatDate(firstDay);
+    document.getElementById('salesEnd').value = formatDate(today);
+    document.getElementById('returnStart').value = formatDate(firstDay);
+    document.getElementById('returnEnd').value = formatDate(today);
+    document.getElementById('cancelledStart').value = formatDate(firstDay);
+    document.getElementById('cancelledEnd').value = formatDate(today);
+    
+    // Set warehouse filters to current location
+    var warehouseSelects = ['salesWarehouse', 'returnWarehouse', 'cancelledWarehouse', 'expiryWarehouse', 'expiredWarehouse'];
+    for (var i = 0; i < warehouseSelects.length; i++) {
+        var select = document.getElementById(warehouseSelects[i]);
+        if (select && currentLocation) select.value = currentLocation;
+    }
+}
+
+// ========== SALES REPORT ==========
+$('#loadSalesReport').click(function() {
+    var start = $('#salesStart').val();
+    var end = $('#salesEnd').val();
+    var warehouse = $('#salesWarehouse').val();
+    
+    if(!start || !end) { alert('Please select both start and end dates'); return; }
+    
+    var url = '/api/reports/sales?start_date=' + start + '&end_date=' + end;
+    if(warehouse) url += '&warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        if(data.length === 0) {
+            $('#salesTable').html('<div class="alert alert-info">No sales found for selected period</div>');
+            $('#salesSummary').hide();
+            return;
+        }
+        
+        var totalAmount = 0;
+        var totalQuantity = 0;
+        
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead>';
+        html += '<tr><th>Order Date</th><th>Order ID</th><th>SKU</th><th>Item Name</th><th>Qty</th>';
+        html += '<th>Sale Value</th><th>Status</th><th>Payment Mode</th><th>Platform</th><th>Business Type</th><th>Created By</th><th>Created On</th></tr>';
+        html += '</thead><tbody>';
+        
+        data.forEach(function(row) {
+            totalAmount += row.sale_value;
+            totalQuantity += row.quantity;
+            html += `<table>
+                <td>${row.order_date}</td>
+                <td><strong>${row.order_id}</strong></td>
+                <td>${row.sku_code}</td>
+                <td>${escapeCSV(row.item_name)}</td>
+                <td>${row.quantity}</td>
+                <td>₹${row.sale_value.toFixed(2)}</td>
+                <td>${getStatusBadge(row.order_status)}</td>
+                <td>${row.payment_mode}</td>
+                <td>${row.platform_name || '-'}</td>
+                <td>${row.business_type || '-'}</td>
+                <td>${row.created_by}</td>
+                <td>${row.created_on}</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        $('#salesTable').html(html);
+        $('#salesSummary').html('<strong>📊 Summary:</strong> Total Orders: ' + data.length + ' | Total Quantity: ' + totalQuantity + ' | Total Amount: ₹' + totalAmount.toFixed(2)).show();
+    });
+});
+
+$('#downloadSalesReport').click(function() {
+    var start = $('#salesStart').val();
+    var end = $('#salesEnd').val();
+    var warehouse = $('#salesWarehouse').val();
+    if(!start || !end) { alert('Please select both start and end dates'); return; }
+    
+    var url = '/api/reports/sales?start_date=' + start + '&end_date=' + end;
+    if(warehouse) url += '&warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        var csvRows = [['Order Date', 'Order ID', 'SKU Code', 'Item Name', 'Quantity', 'Sale Value', 'Order Status', 'Payment Mode', 'Platform Name', 'Business Type', 'Created By', 'Created On']];
+        data.forEach(function(row) {
+            csvRows.push([row.order_date, row.order_id, row.sku_code, escapeCSV(row.item_name), row.quantity, row.sale_value, row.order_status, row.payment_mode, row.platform_name || '', row.business_type || '', row.created_by, row.created_on]);
+        });
+        var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+        downloadCSV(csvContent, 'sales_report_' + start + '_to_' + end + '.csv');
+        alert('✅ Sales report downloaded!');
+    });
+});
+
+// ========== RETURN REPORT ==========
+$('#loadReturnReport').click(function() {
+    var start = $('#returnStart').val();
+    var end = $('#returnEnd').val();
+    var warehouse = $('#returnWarehouse').val();
+    if(!start || !end) { alert('Please select both start and end dates'); return; }
+    
+    var url = '/api/reports/returns?start_date=' + start + '&end_date=' + end;
+    if(warehouse) url += '&warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        if(data.length === 0) {
+            $('#returnTable').html('<div class="alert alert-info">No returns found</div>');
+            $('#returnSummary').hide();
+            return;
+        }
+        
+        var totalAmount = 0;
+        var totalQuantity = 0;
+        
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead>';
+        html += '<tr><th>Order Date</th><th>Order ID</th><th>SKU</th><th>Item Name</th><th>Qty</th><th>Sale Value</th><th>Payment Mode</th><th>Created By</th><th>Created On</th></tr>';
+        html += '</thead><tbody>';
+        
+        data.forEach(function(row) {
+            totalAmount += row.sale_value;
+            totalQuantity += row.quantity;
+            html += `<tr>
+                <td>${row.order_date}</td>
+                <td><strong>${row.order_id}</strong></td>
+                <td>${row.sku_code}</td>
+                <td>${escapeCSV(row.item_name)}</td>
+                <td>${row.quantity}</td>
+                <td>₹${row.sale_value.toFixed(2)}</td>
+                <td>${row.payment_mode}</td>
+                <td>${row.created_by}</td>
+                <td>${row.created_on}</td>
+            </table>`;
+        });
+        html += '</tbody></table>';
+        $('#returnTable').html(html);
+        $('#returnSummary').html('<strong>📊 Summary:</strong> Total Returns: ' + data.length + ' | Total Quantity: ' + totalQuantity + ' | Total Amount: ₹' + totalAmount.toFixed(2)).show();
+    });
+});
+
+$('#downloadReturnReport').click(function() {
+    var start = $('#returnStart').val();
+    var end = $('#returnEnd').val();
+    var warehouse = $('#returnWarehouse').val();
+    if(!start || !end) { alert('Please select both start and end dates'); return; }
+    
+    var url = '/api/reports/returns?start_date=' + start + '&end_date=' + end;
+    if(warehouse) url += '&warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        var csvRows = [['Order Date', 'Order ID', 'SKU Code', 'Item Name', 'Quantity', 'Sale Value', 'Payment Mode', 'Created By', 'Created On']];
+        data.forEach(function(row) {
+            csvRows.push([row.order_date, row.order_id, row.sku_code, escapeCSV(row.item_name), row.quantity, row.sale_value, row.payment_mode, row.created_by, row.created_on]);
+        });
+        var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+        downloadCSV(csvContent, 'return_report_' + start + '_to_' + end + '.csv');
+        alert('✅ Return report downloaded!');
+    });
+});
+
+// ========== CANCELLED REPORT ==========
+$('#loadCancelledReport').click(function() {
+    var start = $('#cancelledStart').val();
+    var end = $('#cancelledEnd').val();
+    var warehouse = $('#cancelledWarehouse').val();
+    if(!start || !end) { alert('Please select both start and end dates'); return; }
+    
+    var url = '/api/reports/cancelled?start_date=' + start + '&end_date=' + end;
+    if(warehouse) url += '&warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        if(data.length === 0) {
+            $('#cancelledTable').html('<div class="alert alert-info">No cancelled orders found</div>');
+            $('#cancelledSummary').hide();
+            return;
+        }
+        
+        var totalAmount = 0;
+        var totalQuantity = 0;
+        
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead>';
+        html += '<tr><th>Order Date</th><th>Order ID</th><th>SKU</th><th>Item Name</th><th>Qty</th><th>Sale Value</th><th>Payment Mode</th><th>Platform</th><th>Business Type</th><th>Created By</th><th>Created On</th></tr>';
+        html += '</thead><tbody>';
+        
+        data.forEach(function(row) {
+            totalAmount += row.sale_value;
+            totalQuantity += row.quantity;
+            html += `<tr>
+                <td>${row.order_date}</td>
+                <td><strong>${row.order_id}</strong></td>
+                <td>${row.sku_code}</td>
+                <td>${escapeCSV(row.item_name)}</td>
+                <td>${row.quantity}</td>
+                <td>₹${row.sale_value.toFixed(2)}</td>
+                <td>${row.payment_mode}</td>
+                <td>${row.platform_name || '-'}</td>
+                <td>${row.business_type || '-'}</td>
+                <td>${row.created_by}</td>
+                <td>${row.created_on}</td>
+            </tr>`;
+        });
+        html += '</tbody></tr>';
+        $('#cancelledTable').html(html);
+        $('#cancelledSummary').html('<strong>📊 Summary:</strong> Total Cancelled: ' + data.length + ' | Total Quantity: ' + totalQuantity + ' | Total Amount: ₹' + totalAmount.toFixed(2)).show();
+    });
+});
+
+$('#downloadCancelledReport').click(function() {
+    var start = $('#cancelledStart').val();
+    var end = $('#cancelledEnd').val();
+    var warehouse = $('#cancelledWarehouse').val();
+    if(!start || !end) { alert('Please select both start and end dates'); return; }
+    
+    var url = '/api/reports/cancelled?start_date=' + start + '&end_date=' + end;
+    if(warehouse) url += '&warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        var csvRows = [['Order Date', 'Order ID', 'SKU Code', 'Item Name', 'Quantity', 'Sale Value', 'Payment Mode', 'Platform Name', 'Business Type', 'Created By', 'Created On']];
+        data.forEach(function(row) {
+            csvRows.push([row.order_date, row.order_id, row.sku_code, escapeCSV(row.item_name), row.quantity, row.sale_value, row.payment_mode, row.platform_name || '', row.business_type || '', row.created_by, row.created_on]);
+        });
+        var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+        downloadCSV(csvContent, 'cancelled_report_' + start + '_to_' + end + '.csv');
+        alert('✅ Cancelled report downloaded!');
+    });
+});
+
+// ========== EXPIRY ALERT ==========
+function loadExpiryAlert() {
+    var warehouse = $('#expiryWarehouse').val();
+    var url = '/api/reports/expiry-alert';
+    if(warehouse) url += '?warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        if(data.length === 0) {
+            $('#expiryAlertTable').html('<div class="alert alert-success">No products expiring within 6 months</div>');
+            return;
+        }
+        
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead class="table-danger">';
+        html += '<tr><th>SKU Code</th><th>Product Name</th><th>Batch No</th><th>Manufacturing Date</th><th>Expiry Date</th><th>Bin No</th><th>Quantity</th><th>Remaining Shelf Life</th><th>Shelf Life %</th></tr>';
+        html += '</thead><tbody>';
+        
+        data.forEach(function(item) {
+            var shelfLife = calculateShelfLife(item.expiry_date);
+            var rowClass = item.shelf_life_percentage < 30 ? 'class="table-warning"' : '';
+            html += `<tr ${rowClass}>
+                <td>${item.sku_code}</td>
+                <td>${escapeCSV(item.product_name)}</td>
+                <td>${item.batch_number || '-'}</td>
+                <td>${item.manufacturing_date || '-'}</td>
+                <td class="text-danger">${item.expiry_date || '-'}</td>
+                <td><span class="bin-chip">${item.bin_no || '-'}</span></td>
+                <td>${item.quantity}</td>
+                <td>${shelfLife.text}</td>
+                <td>${item.shelf_life_percentage}%</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        $('#expiryAlertTable').html(html);
+    });
+}
+
+$('#downloadExpiryReport').click(function() {
+    var warehouse = $('#expiryWarehouse').val();
+    var url = '/api/reports/expiry-alert';
+    if(warehouse) url += '?warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        var csvRows = [['SKU Code', 'Product Name', 'Batch No', 'Manufacturing Date', 'Expiry Date', 'Bin No', 'Quantity', 'Remaining Shelf Life', 'Shelf Life Percentage']];
+        data.forEach(function(item) {
+            var shelfLife = calculateShelfLife(item.expiry_date);
+            csvRows.push([item.sku_code, escapeCSV(item.product_name), item.batch_number || '', item.manufacturing_date || '', item.expiry_date || '', item.bin_no || '', item.quantity, shelfLife.text, item.shelf_life_percentage + '%']);
+        });
+        var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+        downloadCSV(csvContent, 'expiry_alert_' + new Date().toISOString().split('T')[0] + '.csv');
+        alert('✅ Expiry alert report downloaded!');
+    });
+});
+
+// ========== EXPIRED STOCK ==========
+function loadExpiredStock() {
+    var warehouse = $('#expiredWarehouse').val();
+    var url = '/api/reports/expired-stock';
+    if(warehouse) url += '?warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        if(data.length === 0) {
+            $('#expiredTable').html('<div class="alert alert-success">No expired stock found</div>');
+            return;
+        }
+        
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead style="background-color: #343a40; color: white;">';
+        html += '<tr>';
+        html += '<th style="color: white;">SKU Code</th><th style="color: white;">Product Name</th><th style="color: white;">Batch No</th>';
+        html += '<th style="color: white;">Manufacturing Date</th><th style="color: white;">Expiry Date</th><th style="color: white;">Bin No</th><th style="color: white;">Quantity</th><th style="color: white;">Condition</th>';
+        html += '</tr>';
+        html += '</thead><tbody>';
+        
+        data.forEach(function(item) {
+            html += `<tr class="table-danger">
+                <td>${item.sku_code}</td>
+                <td>${escapeCSV(item.product_name)}</td>
+                <td>${item.batch_number || '-'}</td>
+                <td>${item.manufacturing_date || '-'}</td>
+                <td class="text-danger">${item.expiry_date || '-'}</td>
+                <td><span class="bin-chip">${item.bin_no || '-'}</span></td>
+                <td>${item.quantity}</td>
+                <td><span class="badge-status badge-cancelled">Expired</span></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        $('#expiredTable').html(html);
+    });
+}
+
+$('#downloadExpiredReport').click(function() {
+    var warehouse = $('#expiredWarehouse').val();
+    var url = '/api/reports/expired-stock';
+    if(warehouse) url += '?warehouse=' + warehouse;
+    
+    $.get(url, function(data) {
+        var csvRows = [['SKU Code', 'Product Name', 'Batch No', 'Manufacturing Date', 'Expiry Date', 'Bin No', 'Quantity', 'Condition']];
+        data.forEach(function(item) {
+            csvRows.push([item.sku_code, escapeCSV(item.product_name), item.batch_number || '', item.manufacturing_date || '', item.expiry_date || '', item.bin_no || '', item.quantity, 'Expired']);
+        });
+        var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+        downloadCSV(csvContent, 'expired_stock_' + new Date().toISOString().split('T')[0] + '.csv');
+        alert('✅ Expired stock report downloaded!');
+    });
+});
+
+$('#refreshExpiry').click(function() { loadExpiryAlert(); });
+$('#refreshExpired').click(function() { loadExpiredStock(); });
+
+setDefaultDates();
+loadExpiryAlert();
+loadExpiredStock();
+</script>
+{% endblock %}
