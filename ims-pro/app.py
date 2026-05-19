@@ -412,8 +412,12 @@ def inventory_api():
             bin_no = data.get('bin_no')
             if not bin_no or bin_no == '':
                 if data['warehouse_name'] == 'Kaushambi':
-                    kaushambi_bins = ['K-B01', 'K-B02', 'K-B03', 'K-B04']
-                    bin_no = kaushambi_bins[Inventory.query.filter_by(warehouse_name='Kaushambi').count() % 4]
+                    kaushambi_bins = ['K-A01', 'K-A02', 'K-A03', 'K-A04',
+                                     'K-B01', 'K-B02', 'K-B03', 'K-B04',
+                                     'K-C01', 'K-C02', 'K-C03', 'K-C04',
+                                     'K-D01', 'K-D02', 'K-D03', 'K-D04'
+                                     ]
+                    bin_no = kaushambi_bins[Inventory.query.filter_by(warehouse_name='Kaushambi').count() % len(kaushambi_bins)]
                 else:
                     manak_bins = ['A-01', 'A-02', 'A-03', 'A-04', 'B-01', 'B-02', 'B-03', 'B-04', 
                                   'C-01', 'C-02', 'C-03', 'C-04', 'D-01', 'D-02', 'D-03', 'D-04', 
