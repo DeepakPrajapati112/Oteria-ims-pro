@@ -1,0 +1,963 @@
+{% extends "base.html" %}
+{% block title %}Inventory Management{% endblock %}
+{% block content %}
+<style>
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #2196F3;
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+    }
+    .error-log {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 5px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-size: 12px;
+        font-family: monospace;
+    }
+    .success-log {
+        background: #d4edda;
+        border: 1px solid #28a745;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 5px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-size: 12px;
+    }
+    .btn-download-error {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+    }
+    .btn-download-error:hover {
+        background-color: #c82333;
+    }
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+    }
+    .condition-badge-good {
+        background-color: #28a745;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 12px;
+        display: inline-block;
+    }
+    .condition-badge-expired {
+        background-color: #dc3545;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 12px;
+        display: inline-block;
+    }
+    .condition-badge-damaged {
+        background-color: #ffc107;
+        color: black;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 12px;
+        display: inline-block;
+    }
+    
+    /* ========== FIX: Table column alignment ========== */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        font-size: 12px;
+    }
+    
+    .table {
+        min-width: 1400px;
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: auto;
+    }
+    
+    .table th, 
+    .table td {
+        padding: 8px 10px;
+        vertical-align: middle;
+        white-space: nowrap;
+        border: 1px solid #dee2e6;
+    }
+    
+    .table th {
+        background-color: #343a40;
+        color: white;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    /* Fixed width for specific columns to prevent shifting */
+    .table th:nth-child(1), .table td:nth-child(1) { min-width: 120px; } /* SKU Code */
+    .table th:nth-child(2), .table td:nth-child(2) { min-width: 180px; } /* Item Name */
+    .table th:nth-child(3), .table td:nth-child(3) { min-width: 100px; } /* Batch No */
+    .table th:nth-child(4), .table td:nth-child(4) { min-width: 80px; }  /* MRP */
+    .table th:nth-child(5), .table td:nth-child(5) { min-width: 100px; } /* Purchase Price */
+    .table th:nth-child(6), .table td:nth-child(6) { min-width: 100px; } /* Mfg Date */
+    .table th:nth-child(7), .table td:nth-child(7) { min-width: 100px; } /* Expiry Date */
+    .table th:nth-child(8), .table td:nth-child(8) { min-width: 70px; }  /* Bin No */
+    .table th:nth-child(9), .table td:nth-child(9) { min-width: 80px; }  /* Quantity */
+    .table th:nth-child(10), .table td:nth-child(10) { min-width: 80px; } /* Condition */
+    .table th:nth-child(11), .table td:nth-child(11) { min-width: 120px; } /* Warehouse */
+    .table th:nth-child(12), .table td:nth-child(12) { min-width: 100px; } /* Location Code */
+    .table th:nth-child(13), .table td:nth-child(13) { min-width: 120px; } /* Shelf Life */
+    .table th:nth-child(14), .table td:nth-child(14) { min-width: 80px; } /* Shelf Life % */
+    
+    /* Filters row styling */
+    .filter-row {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .filter-row select, 
+    .filter-row input {
+        font-size: 13px;
+    }
+</style>
+
+<h2>📦 Inventory Management</h2>
+
+<div class="alert alert-info mb-3" id="statusBar">
+    <strong>🔧 Status:</strong> Ready
+    <button class="btn btn-sm btn-primary float-end" id="testBtn">Test API</button>
+</div>
+
+<div class="info-box">
+    <strong>📌 Location Code & Bin No Explained:</strong><br>
+    <small>
+        • <strong>Location Code:</strong> Physical area (e.g., SHELF-A1, RACK-03)<br>
+        • <strong>Bin No:</strong> Specific box/shelf number (e.g., A-01, B-02, K-A01)<br>
+        • <strong>For Manak Vihar:</strong> Bins: A-01 to A-04, B-01 to B-04, C-01 to C-04, D-01 to D-04, E-01 to E-04, F-02, F-03, G-01 to G-04<br>
+        • <strong>For Kaushambi:</strong> Bins: K-A01 to K-A04, K-B01 to K-B04, K-C01 to K-C04, K-D01 to K-D04
+    </small>
+</div>
+
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#addProduct">➕ Add Product</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#editProduct">✏️ Edit Product</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#receiveProduct">📥 Receive Stock</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#currentStock">📊 Current Stock</a>
+    </li>
+</ul>
+
+<div class="tab-content mt-3">
+    
+    <!-- ADD PRODUCT TAB -->
+    <div class="tab-pane fade show active" id="addProduct">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Add New Product</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="mb-3">📝 Single Product</h6>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label>SKU Code *</label>
+                        <input type="text" class="form-control" id="skuCode" placeholder="TEST001">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label>Product Name *</label>
+                        <input type="text" class="form-control" id="productName" placeholder="Test Product">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label>Unit</label>
+                        <select class="form-control" id="unit">
+                            <option>Pcs</option>
+                            <option>Kgs</option>
+                            <option>Boxes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary w-100" id="addBtn">Add Product</button>
+                    </div>
+                </div>
+                <div id="addMsg" class="mt-2"></div>
+                
+                <hr class="my-4">
+                
+                <h6 class="mb-3">📎 Bulk Upload Products</h6>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="bulkProductFile" accept=".csv">
+                            <button class="btn btn-info" id="downloadProductSample">📥 Download Sample CSV</button>
+                            <button class="btn btn-warning" id="uploadProductsBtn">📤 Upload & Import</button>
+                        </div>
+                        <small class="text-muted">Format: SKU Code, Product Name, Unit (Pcs/Kgs/Boxes)</small>
+                    </div>
+                </div>
+                <div id="bulkProductMsg" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- EDIT PRODUCT TAB -->
+    <div class="tab-pane fade" id="editProduct">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">✏️ Edit Product</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" id="searchEditProduct" placeholder="🔍 Search by SKU or Product Name...">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary w-100" id="refreshProductList">Refresh List</button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-success w-100" id="exportProductsBtn">📥 Export Products</button>
+                    </div>
+                </div>
+                <div id="productListTable" style="overflow-x: auto;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RECEIVE STOCK TAB -->
+    <div class="tab-pane fade" id="receiveProduct">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Receive Stock</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="mb-3">📦 Single Product Stock</h6>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label>SKU Code *</label>
+                        <input type="text" class="form-control" id="receiveSku" placeholder="TEST001">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Product Name</label>
+                        <input type="text" class="form-control" id="dispProductName" readonly>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Batch Number *</label>
+                        <input type="text" class="form-control" id="batchNo" placeholder="BATCH001">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Quantity *</label>
+                        <input type="number" class="form-control" id="qty">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Manufacturing Date</label>
+                        <input type="date" class="form-control" id="mfgDate">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Expiry Date</label>
+                        <input type="date" class="form-control" id="expiryDate">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label>Purchase Price (₹)</label>
+                        <input type="number" class="form-control" id="purPrice" step="0.01">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label>MRP (₹)</label>
+                        <input type="number" class="form-control" id="mrp" step="0.01">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label>Selling Price (₹)</label>
+                        <input type="number" class="form-control" id="sellPrice" step="0.01">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Condition</label>
+                        <select class="form-control" id="condition">
+                            <option>Good</option>
+                            <option>Damaged</option>
+                            <option>Expired</option>
+                            <option>Used</option>
+                            <option>Empty</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Warehouse</label>
+                        <select class="form-control" id="warehouse">
+                            <option value="Manak_Vihar">Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Location Code</label>
+                        <input type="text" class="form-control" id="location" placeholder="SHELF-A1">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label>Bin No</label>
+                        <input type="text" class="form-control" id="binNo" placeholder="Auto if blank">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label>Remarks</label>
+                        <textarea class="form-control" id="remarks" rows="2"></textarea>
+                    </div>
+                </div>
+                <button class="btn btn-success" id="receiveBtn">Receive Stock</button>
+                <div id="receiveMsg" class="mt-3"></div>
+                
+                <hr class="my-4">
+                
+                <h6 class="mb-3">📎 Bulk Stock Receive</h6>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="alert alert-warning">
+                            <strong>⚠️ CSV Format Instructions:</strong><br>
+                            File must have these columns in EXACT order:<br>
+                            <code>SKU, Batch No, Mfg Date (YYYY-MM-DD), Expiry Date (YYYY-MM-DD), Quantity, Purchase Price, MRP, Selling Price, Condition, Warehouse, Location Code, Bin No, Remarks</code>
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="file" class="form-control" id="bulkStockFile" accept=".csv">
+                            <button class="btn btn-info" id="downloadStockSample">📥 Download Sample CSV</button>
+                            <button class="btn btn-warning" id="uploadStockBtn">📤 Upload & Import</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="bulkStockMsg" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CURRENT STOCK TAB -->
+    <div class="tab-pane fade" id="currentStock">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Current Inventory - Complete Stock Report</h5>
+            </div>
+            <div class="card-body">
+                <div class="filter-row">
+                    <div class="row g-2">
+                        <div class="col-md-2">
+                            <select class="form-control" id="warehouseFilter">
+                                <option value="">🏠 All Warehouses</option>
+                                <option value="Manak_Vihar">📍 Manak Vihar, Delhi</option>
+                                <option value="Kaushambi">📍 Kaushambi, Ghaziabad</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-control" id="conditionFilter">
+                                <option value="">📋 All Conditions</option>
+                                <option value="Good">✅ Good</option>
+                                <option value="Damaged">⚠️ Damaged</option>
+                                <option value="Expired">❌ Expired</option>
+                                <option value="Used">🔄 Used</option>
+                                <option value="Empty">📦 Empty</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control" id="searchSku" placeholder="🔍 Search by SKU or Product...">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control" id="searchBatch" placeholder="🔍 Search by Batch No...">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" class="form-control" id="searchBin" placeholder="🔍 Search by Bin No...">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" id="refreshBtn">🔄 Refresh</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <button class="btn btn-success w-100" id="exportBtn">📥 Export Complete Inventory to CSV</button>
+                    </div>
+                </div>
+                <div id="stockTable" style="overflow-x: auto;"></div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+// Get current location from global storage
+var currentLocation = localStorage.getItem('globalLocation') || 'Manak_Vihar';
+
+function downloadCSV(data, filename) {
+    const blob = new Blob(["\uFEFF" + data], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+function escapeCSV(field) {
+    if (field === undefined || field === null) return '';
+    var stringField = String(field);
+    if (stringField.includes(',') || stringField.includes('\n') || stringField.includes('"')) {
+        stringField = stringField.replace(/"/g, '""');
+        return '"' + stringField + '"';
+    }
+    return stringField;
+}
+
+function escapeHtml(text) {
+    if(!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function calculateShelfLife(expiryDate) {
+    if(!expiryDate || expiryDate === '') return { text: 'No expiry date', percentage: 0 };
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var expDate = new Date(expiryDate);
+    expDate.setHours(0, 0, 0, 0);
+    if(expDate < today) {
+        var daysOverdue = Math.floor((today - expDate) / (1000 * 60 * 60 * 24));
+        return { text: 'Expired (' + daysOverdue + ' days ago)', percentage: 0 };
+    }
+    var daysLeft = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
+    var months = Math.floor(daysLeft / 30);
+    var days = daysLeft % 30;
+    var percentage = Math.min(Math.round((daysLeft / 365) * 100), 100);
+    var text = '';
+    if(months > 0 && days > 0) text = months + ' months, ' + days + ' days';
+    else if(months > 0) text = months + ' months';
+    else text = days + ' days';
+    return { text: text, percentage: percentage };
+}
+
+function getConditionBadge(condition) {
+    if(condition === 'Good') return 'condition-badge-good';
+    if(condition === 'Expired') return 'condition-badge-expired';
+    return 'condition-badge-damaged';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Page loaded - Current Location:", currentLocation);
+    
+    // Set warehouse filter to current location
+    var warehouseFilter = document.getElementById('warehouseFilter');
+    if (warehouseFilter && currentLocation) {
+        warehouseFilter.value = currentLocation;
+    }
+    
+    var today = new Date().toISOString().split('T')[0];
+    var nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    document.getElementById('mfgDate').value = today;
+    document.getElementById('expiryDate').value = nextYear.toISOString().split('T')[0];
+    
+    document.getElementById('testBtn').addEventListener('click', function() {
+        fetch('/api/test')
+            .then(response => response.json())
+            .then(data => alert('✅ API Working! Products: ' + data.product_count))
+            .catch(() => alert('❌ API Error!'));
+    });
+    
+    document.getElementById('addBtn').addEventListener('click', function() {
+        var sku = document.getElementById('skuCode').value.trim().toUpperCase();
+        var name = document.getElementById('productName').value.trim();
+        var unit = document.getElementById('unit').value;
+        
+        if(!sku || !name) {
+            document.getElementById('addMsg').innerHTML = '<div class="alert alert-warning">Please fill SKU and Product Name</div>';
+            return;
+        }
+        
+        document.getElementById('addMsg').innerHTML = '<div class="alert alert-info">Adding product...</div>';
+        
+        fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sku_code: sku, product_name: name, unit: unit })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('addMsg').innerHTML = '<div class="alert alert-success">✅ Product added: ' + sku + '</div>';
+                document.getElementById('skuCode').value = '';
+                document.getElementById('productName').value = '';
+                setTimeout(() => document.getElementById('addMsg').innerHTML = '', 3000);
+                loadProducts();
+                loadStock();
+            } else {
+                document.getElementById('addMsg').innerHTML = '<div class="alert alert-danger">❌ ' + data.error + '</div>';
+            }
+        });
+    });
+    
+    document.getElementById('downloadProductSample').addEventListener('click', function() {
+        var sample = "SKU Code,Product Name,Unit\nPROD001,Sample Product 1,Pcs\nPROD002,Sample Product 2,Kgs";
+        downloadCSV(sample, 'product_sample.csv');
+    });
+    
+    document.getElementById('uploadProductsBtn').addEventListener('click', function() {
+        var file = document.getElementById('bulkProductFile').files[0];
+        if(!file) { alert('Please select a CSV file'); return; }
+        
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var lines = e.target.result.split(/\r?\n/);
+            var successCount = 0;
+            var errorCount = 0;
+            
+            for(var i = 1; i < lines.length; i++) {
+                if(!lines[i].trim()) continue;
+                var cols = lines[i].split(',');
+                if(cols.length >= 2) {
+                    var sku = cols[0].trim().toUpperCase();
+                    var name = cols[1].trim();
+                    var unit = cols[2] ? cols[2].trim() : 'Pcs';
+                    
+                    if(sku && name) {
+                        var request = new XMLHttpRequest();
+                        request.open('POST', '/api/products', false);
+                        request.setRequestHeader('Content-Type', 'application/json');
+                        request.send(JSON.stringify({ sku_code: sku, product_name: name, unit: unit }));
+                        
+                        try {
+                            var response = JSON.parse(request.responseText);
+                            if(response.success) successCount++;
+                            else errorCount++;
+                        } catch(e) { errorCount++; }
+                    }
+                }
+            }
+            
+            document.getElementById('bulkProductMsg').innerHTML = `<div class="alert alert-info">✅ Imported: ${successCount} products, ❌ Failed: ${errorCount}</div>`;
+            loadProducts();
+            setTimeout(() => document.getElementById('bulkProductMsg').innerHTML = '', 3000);
+        };
+        reader.readAsText(file);
+    });
+    
+    function loadProducts() {
+        fetch('/api/products')
+            .then(response => response.json())
+            .then(products => {
+                if(products.length === 0) {
+                    document.getElementById('productListTable').innerHTML = '<div class="alert alert-info">No products found.</div>';
+                    return;
+                }
+                
+                var searchTerm = document.getElementById('searchEditProduct').value.toLowerCase();
+                var filtered = products.filter(function(p) {
+                    return p.sku_code.toLowerCase().includes(searchTerm) || p.product_name.toLowerCase().includes(searchTerm);
+                });
+                
+                var html = '<div class="table-responsive">';
+                html += '<table class="table table-bordered table-striped" style="min-width: 600px;">';
+                html += '<thead class="table-dark">';
+                html += '<tr><th>SKU Code</th><th>Product Name</th><th>Unit</th><th>Action</th></tr>';
+                html += '</thead><tbody>';
+                
+                for(var i = 0; i < filtered.length; i++) {
+                    var product = filtered[i];
+                    html += `<tr id="product-row-${product.sku_code}">
+                        <td><strong>${escapeHtml(product.sku_code)}</strong></td>
+                        <td><input type="text" class="form-control edit-product-name" id="name-${product.sku_code}" value="${escapeHtml(product.product_name)}" style="max-width: 300px;"></td>
+                        <td>
+                            <select class="form-control edit-product-unit" id="unit-${product.sku_code}" style="width: 100px;">
+                                <option ${product.unit == 'Pcs' ? 'selected' : ''}>Pcs</option>
+                                <option ${product.unit == 'Kgs' ? 'selected' : ''}>Kgs</option>
+                                <option ${product.unit == 'Boxes' ? 'selected' : ''}>Boxes</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary save-product" data-sku="${escapeHtml(product.sku_code)}">💾 Save</button>
+                        </td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+                document.getElementById('productListTable').innerHTML = html;
+            });
+    }
+    
+    document.getElementById('refreshProductList').addEventListener('click', loadProducts);
+    document.getElementById('searchEditProduct').addEventListener('keyup', loadProducts);
+    
+    $(document).on('click', '.save-product', function() {
+        var sku = $(this).data('sku');
+        var newName = document.getElementById(`name-${sku}`).value;
+        var newUnit = document.getElementById(`unit-${sku}`).value;
+        
+        fetch('/api/products/update', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sku_code: sku, product_name: newName, unit: newUnit })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                alert('✅ Product updated successfully!');
+                loadProducts();
+                loadStock();
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        });
+    });
+    
+    document.getElementById('exportProductsBtn').addEventListener('click', function() {
+        fetch('/api/products')
+            .then(response => response.json())
+            .then(products => {
+                var csvRows = [['SKU Code', 'Product Name', 'Unit']];
+                for(var i = 0; i < products.length; i++) {
+                    csvRows.push([escapeCSV(products[i].sku_code), escapeCSV(products[i].product_name), escapeCSV(products[i].unit)]);
+                }
+                var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+                downloadCSV(csvContent, 'products_export_' + new Date().toISOString().split('T')[0] + '.csv');
+                alert('✅ Products exported!');
+            });
+    });
+    
+    document.getElementById('receiveSku').addEventListener('change', function() {
+        var sku = this.value.toUpperCase();
+        if(sku) {
+            fetch('/api/products/' + sku)
+                .then(response => response.json())
+                .then(function(product) {
+                    if(product.product_name) {
+                        document.getElementById('dispProductName').value = product.product_name;
+                    } else {
+                        document.getElementById('dispProductName').value = '❌ NOT FOUND';
+                    }
+                })
+                .catch(function() { document.getElementById('dispProductName').value = '❌ NOT FOUND'; });
+        }
+    });
+    
+    document.getElementById('receiveBtn').addEventListener('click', function() {
+        var sku = document.getElementById('receiveSku').value.toUpperCase();
+        if(!sku) { alert('Enter SKU'); return; }
+        
+        var data = {
+            sku_code: sku,
+            batch_number: document.getElementById('batchNo').value,
+            manufacturing_date: document.getElementById('mfgDate').value,
+            expiry_date: document.getElementById('expiryDate').value,
+            quantity: parseInt(document.getElementById('qty').value) || 0,
+            purchase_price: parseFloat(document.getElementById('purPrice').value) || 0,
+            mrp: parseFloat(document.getElementById('mrp').value) || 0,
+            selling_price: parseFloat(document.getElementById('sellPrice').value) || 0,
+            condition: document.getElementById('condition').value,
+            warehouse_name: document.getElementById('warehouse').value,
+            location_code: document.getElementById('location').value,
+            bin_no: document.getElementById('binNo').value,
+            remarks: document.getElementById('remarks').value
+        };
+        
+        document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-info">Receiving...</div>';
+        
+        fetch('/api/inventory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(function(res) {
+            if(res.success) {
+                document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-success">✅ Stock received! Bin: ' + res.bin_no + '</div>';
+                document.getElementById('receiveSku').value = '';
+                document.getElementById('batchNo').value = '';
+                document.getElementById('qty').value = '';
+                document.getElementById('purPrice').value = '';
+                document.getElementById('mrp').value = '';
+                document.getElementById('sellPrice').value = '';
+                document.getElementById('location').value = '';
+                document.getElementById('binNo').value = '';
+                document.getElementById('dispProductName').value = '';
+                loadStock();
+                setTimeout(function() { document.getElementById('receiveMsg').innerHTML = ''; }, 3000);
+            } else {
+                document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-danger">❌ ' + res.error + '</div>';
+            }
+        });
+    });
+    
+    document.getElementById('downloadStockSample').addEventListener('click', function() {
+        var sample = "SKU,Batch No,Mfg Date,Expiry Date,Quantity,Purchase Price,MRP,Selling Price,Condition,Warehouse,Location Code,Bin No,Remarks\n" +
+                     "TEST001,BATCH001,2026-04-30,2027-04-30,100,50,100,80,Good,Manak_Vihar,SHELF-A1,A-01,Test entry";
+        downloadCSV(sample, 'stock_import_sample.csv');
+    });
+    
+    document.getElementById('uploadStockBtn').addEventListener('click', function() {
+        var file = document.getElementById('bulkStockFile').files[0];
+        if(!file) { alert('Please select a CSV file'); return; }
+        
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var lines = e.target.result.split(/\r?\n/);
+            var successCount = 0;
+            var errorCount = 0;
+            
+            for(var i = 1; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if(line === '') continue;
+                var cols = line.split(',');
+                
+                if(cols.length < 8) {
+                    errorCount++;
+                    continue;
+                }
+                
+                var sku = cols[0] ? cols[0].trim().toUpperCase() : '';
+                var batchNo = cols[1] ? cols[1].trim() : '';
+                var qty = parseInt(cols[4]) || 0;
+                
+                if(!sku || !batchNo || qty <= 0) {
+                    errorCount++;
+                    continue;
+                }
+                
+                var stockData = {
+                    sku_code: sku,
+                    batch_number: batchNo,
+                    manufacturing_date: cols[2] ? cols[2].trim() : '',
+                    expiry_date: cols[3] ? cols[3].trim() : '',
+                    quantity: qty,
+                    purchase_price: parseFloat(cols[5]) || 0,
+                    mrp: parseFloat(cols[6]) || 0,
+                    selling_price: parseFloat(cols[7]) || 0,
+                    condition: cols[8] ? cols[8].trim() : 'Good',
+                    warehouse_name: cols[9] ? cols[9].trim() : 'Manak_Vihar',
+                    location_code: cols[10] ? cols[10].trim() : '',
+                    bin_no: cols[11] ? cols[11].trim() : '',
+                    remarks: cols[12] ? cols[12].trim() : ''
+                };
+                
+                var request = new XMLHttpRequest();
+                request.open('POST', '/api/inventory', false);
+                request.setRequestHeader('Content-Type', 'application/json');
+                request.send(JSON.stringify(stockData));
+                
+                try {
+                    var response = JSON.parse(request.responseText);
+                    if(response.success) successCount++;
+                    else errorCount++;
+                } catch(e) { errorCount++; }
+            }
+            
+            document.getElementById('bulkStockMsg').innerHTML = '<div class="alert alert-info">✅ Success: ' + successCount + ' | ❌ Failed: ' + errorCount + '</div>';
+            loadStock();
+            setTimeout(function() { document.getElementById('bulkStockMsg').innerHTML = ''; }, 3000);
+        };
+        reader.readAsText(file);
+    });
+    
+    // ========== FIXED: Stock Table with Proper Column Alignment ==========
+    function loadStock() {
+        var warehouse = document.getElementById('warehouseFilter').value;
+        var condition = document.getElementById('conditionFilter').value;
+        var searchSku = document.getElementById('searchSku').value.toUpperCase();
+        var searchBatch = document.getElementById('searchBatch').value.toUpperCase();
+        var searchBin = document.getElementById('searchBin').value.toUpperCase();
+        var url = '/api/inventory';
+        
+        // Use current location if warehouse not selected
+        if (!warehouse) {
+            warehouse = currentLocation;
+            document.getElementById('warehouseFilter').value = warehouse;
+        }
+        if(warehouse) url += '?warehouse=' + warehouse;
+        
+        fetch(url)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if(searchSku) {
+                    data = data.filter(function(item) {
+                        return (item.sku_code && item.sku_code.toUpperCase().includes(searchSku)) ||
+                               (item.product_name && item.product_name.toLowerCase().includes(searchSku.toLowerCase()));
+                    });
+                }
+                if(searchBatch) {
+                    data = data.filter(function(item) {
+                        return item.batch_number && item.batch_number.toUpperCase().includes(searchBatch);
+                    });
+                }
+                if(searchBin) {
+                    data = data.filter(function(item) {
+                        return item.bin_no && item.bin_no.toUpperCase().includes(searchBin);
+                    });
+                }
+                if(condition) {
+                    data = data.filter(function(item) { return item.condition === condition; });
+                }
+                
+                if(data.length === 0) {
+                    document.getElementById('stockTable').innerHTML = '<div class="alert alert-info">No stock available</div>';
+                    return;
+                }
+                
+                var html = '<div class="table-responsive">';
+                html += '<table class="table table-bordered table-striped" style="min-width: 1400px;">';
+                html += '<thead class="table-dark">';
+                html += '<tr>';
+                html += '<th>SKU Code</th>';
+                html += '<th>Item Name</th>';
+                html += '<th>Batch No</th>';
+                html += '<th>MRP (₹)</th>';
+                html += '<th>Purchase Price (₹)</th>';
+                html += '<th>Manufacturing Date</th>';
+                html += '<th>Expiry Date</th>';
+                html += '<th>Bin No</th>';
+                html += '<th>Item Quantity</th>';
+                html += '<th>Condition</th>';
+                html += '<th>Warehouse Name</th>';
+                html += '<th>Location Code</th>';
+                html += '<th>Remaining Shelf Life</th>';
+                html += '<th>Shelf Life %</th>';
+                html += '<th>Date</th>';
+                html += '<th>Updated By</th>';
+                html += '<th>Updated On</th>';
+                html += '<th>Remarks</th>';
+                html += '</tr>';
+                html += '</thead><tbody>';
+                
+                for(var i = 0; i < data.length; i++) {
+                    var item = data[i];
+                    var shelfLife = calculateShelfLife(item.expiry_date);
+                    var currentDate = new Date().toISOString().split('T')[0];
+                    var conditionClass = getConditionBadge(item.condition || 'Good');
+                    
+                    html += '<tr>';
+                    html += '<td>' + escapeHtml(item.sku_code || '-') + '</td>';
+                    html += '<td>' + escapeHtml(item.product_name || '-') + '</td>';
+                    html += '<td>' + escapeHtml(item.batch_number || '-') + '</td>';
+                    html += '<td>₹' + (item.mrp || '0') + '</td>';
+                    html += '<td>₹' + (item.purchase_price || '0') + '</td>';
+                    html += '<td>' + (item.manufacturing_date || '-') + '</td>';
+                    html += '<td>' + (item.expiry_date || '-') + '</td>';
+                    html += '<td>' + escapeHtml(item.bin_no || '-') + '</td>';
+                    html += '<td>' + (item.quantity || '0') + '</td>';
+                    html += '<td><span class="' + conditionClass + '">' + (item.condition || 'Good') + '</span></td>';
+                    html += '<td>' + escapeHtml(item.warehouse_name || '-') + '</td>';
+                    html += '<td>' + escapeHtml(item.location_code || '-') + '</td>';
+                    html += '<td>' + shelfLife.text + '</td>';
+                    html += '<td>' + shelfLife.percentage + '%</td>';
+                    html += '<td>' + currentDate + '</td>';
+                    html += '<td>' + escapeHtml(item.updated_by || '-') + '</td>';
+                    html += '<td>' + (item.updated_on || '-') + '</td>';
+                    html += '<td>' + escapeHtml(item.remarks || '-') + '</td>';
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+                html += '</table>';
+                html += '</div>';
+                document.getElementById('stockTable').innerHTML = html;
+            })
+            .catch(function(error) {
+                console.error("Load error:", error);
+                document.getElementById('stockTable').innerHTML = '<div class="alert alert-danger">Failed to load inventory</div>';
+            });
+    }
+    
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        var warehouse = document.getElementById('warehouseFilter').value;
+        var condition = document.getElementById('conditionFilter').value;
+        var searchSku = document.getElementById('searchSku').value.toUpperCase();
+        var searchBatch = document.getElementById('searchBatch').value.toUpperCase();
+        var searchBin = document.getElementById('searchBin').value.toUpperCase();
+        var url = '/api/inventory';
+        if(warehouse) url += '?warehouse=' + warehouse;
+        
+        fetch(url)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if(searchSku) {
+                    data = data.filter(function(item) {
+                        return (item.sku_code && item.sku_code.toUpperCase().includes(searchSku)) ||
+                               (item.product_name && item.product_name.toLowerCase().includes(searchSku.toLowerCase()));
+                    });
+                }
+                if(searchBatch) {
+                    data = data.filter(function(item) {
+                        return item.batch_number && item.batch_number.toUpperCase().includes(searchBatch);
+                    });
+                }
+                if(searchBin) {
+                    data = data.filter(function(item) {
+                        return item.bin_no && item.bin_no.toUpperCase().includes(searchBin);
+                    });
+                }
+                if(condition) {
+                    data = data.filter(function(item) { return item.condition === condition; });
+                }
+                
+                var csvRows = [];
+                csvRows.push([
+                    'SKU Code', 'Item Name', 'Batch No', 'MRP', 'Purchase Price', 
+                    'Manufacturing Date', 'Expiry Date', 'Bin No', 'Item Quantity', 
+                    'Condition', 'Warehouse Name', 'Location Code', 
+                    'Remaining Shelf Life (Months & Days)', 'Shelf Life %', 
+                    'Date (Current Timestamp)', 'Updated By (User)', 
+                    'Updated On (With Timestamp)', 'Remarks'
+                ]);
+                
+                var currentDate = new Date().toISOString().split('T')[0];
+                
+                for(var i = 0; i < data.length; i++) {
+                    var item = data[i];
+                    var shelfLife = calculateShelfLife(item.expiry_date);
+                    
+                    csvRows.push([
+                        escapeCSV(item.sku_code || ''),
+                        escapeCSV(item.product_name || ''),
+                        escapeCSV(item.batch_number || ''),
+                        escapeCSV(item.mrp || '0'),
+                        escapeCSV(item.purchase_price || '0'),
+                        escapeCSV(item.manufacturing_date || ''),
+                        escapeCSV(item.expiry_date || ''),
+                        escapeCSV(item.bin_no || ''),
+                        escapeCSV(item.quantity || '0'),
+                        escapeCSV(item.condition || 'Good'),
+                        escapeCSV(item.warehouse_name || ''),
+                        escapeCSV(item.location_code || ''),
+                        escapeCSV(shelfLife.text),
+                        escapeCSV(shelfLife.percentage + '%'),
+                        escapeCSV(currentDate),
+                        escapeCSV(item.updated_by || ''),
+                        escapeCSV(item.updated_on || ''),
+                        escapeCSV((item.remarks || '').replace(/,/g, ';'))
+                    ]);
+                }
+                
+                var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+                downloadCSV(csvContent, 'complete_inventory_' + new Date().toISOString().split('T')[0] + '.csv');
+                alert('✅ Complete inventory exported successfully!');
+            });
+    });
+    
+    document.getElementById('refreshBtn').addEventListener('click', loadStock);
+    document.getElementById('warehouseFilter').addEventListener('change', loadStock);
+    document.getElementById('conditionFilter').addEventListener('change', loadStock);
+    document.getElementById('searchSku').addEventListener('keyup', loadStock);
+    document.getElementById('searchBatch').addEventListener('keyup', loadStock);
+    document.getElementById('searchBin').addEventListener('keyup', loadStock);
+    
+    loadProducts();
+    loadStock();
+});
+</script>
+{% endblock %}

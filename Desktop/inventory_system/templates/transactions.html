@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Transaction History{% endblock %}
+{% block content %}
+<style>
+    .transactions-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+    .transactions-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -20px -20px 20px -20px;
+    }
+    .filter-bar {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .transaction-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .transaction-table th {
+        background-color: #343a40;
+        color: white;
+        padding: 12px;
+        text-align: left;
+    }
+    .transaction-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+    .transaction-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    .type-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .type-login { background: #17a2b8; color: white; }
+    .type-logout { background: #6c757d; color: white; }
+    .type-product { background: #28a745; color: white; }
+    .type-stock { background: #007bff; color: white; }
+    .type-order { background: #fd7e14; color: white; }
+    .type-user { background: #6610f2; color: white; }
+    .type-grn { background: #20c997; color: white; }
+    .type-transfer { background: #e83e8c; color: white; }
+    .type-default { background: #6c757d; color: white; }
+</style>
+
+<h2>📜 Transaction History</h2>
+
+<div class="transactions-card">
+    <div class="transactions-header">
+        <h5 class="mb-0">📋 System Activity Log</h5>
+    </div>
+    <div class="card-body">
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="row">
+                <div class="col-md-3">
+                    <label>Start Date</label>
+                    <input type="date" class="form-control" id="startDate">
+                </div>
+                <div class="col-md-3">
+                    <label>End Date</label>
+                    <input type="date" class="form-control" id="endDate">
+                </div>
+                <div class="col-md-3">
+                    <label>Transaction Type</label>
+                    <select class="form-control" id="typeFilter">
+                        <option value="">All Transactions</option>
+                        <option value="LOGIN">🔐 Login</option>
+                        <option value="LOGOUT">🚪 Logout</option>
+                        <option value="PRODUCT_ADDED">📦 Product Added</option>
+                        <option value="STOCK_RECEIVED">📥 Stock Received</option>
+                        <option value="ORDER_CREATED_ADVANCED">🛒 Order Created</option>
+                        <option value="ORDER_STATUS_UPDATED">📊 Order Status Updated</option>
+                        <option value="USER_CREATED">👤 User Created</option>
+                        <option value="USER_DELETED">🗑 User Deleted</option>
+                        <option value="USER_ROLE_UPDATED">👔 User Role Updated</option>
+                        <option value="USER_DETAILS_UPDATED">✏️ User Details Updated</option>
+                        <option value="PASSWORD_RESET">🔑 Password Reset</option>
+                        <option value="GRN_CREATED">📄 GRN Created</option>
+                        <option value="STOCK_TRANSFER">🔄 Stock Transfer</option>
+                        <option value="TRANSFER_RECEIVED">📥 Transfer Received</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>User</label>
+                    <input type="text" class="form-control" id="userFilter" placeholder="Search by username...">
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <button class="btn btn-primary" id="applyFilterBtn">🔍 Apply Filters</button>
+                    <button class="btn btn-secondary" id="resetFilterBtn">🔄 Reset</button>
+                    <button class="btn btn-success float-end" id="exportTransactionsBtn">📥 Export to CSV</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" style="display: none;" class="alert alert-info">
+            <i class="bi bi-hourglass-split"></i> Loading transactions...
+        </div>
+
+        <!-- Transactions Table -->
+        <div id="transactionsTable" class="table-responsive">
+            <!-- Table will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+let allTransactions = [];
+
+function getTypeBadgeClass(type) {
+    if (type.includes('LOGIN')) return 'type-login';
+    if (type.includes('LOGOUT')) return 'type-logout';
+    if (type.includes('PRODUCT')) return 'type-product';
+    if (type.includes('STOCK_RECEIVED')) return 'type-stock';
+    if (type.includes('ORDER')) return 'type-order';
+    if (type.includes('USER')) return 'type-user';
+    if (type.includes('GRN')) return 'type-grn';
+    if (type.includes('TRANSFER')) return 'type-transfer';
+    return 'type-default';
+}
+
+function getTypeIcon(type) {
+    if (type.includes('LOGIN')) return '🔐';
+    if (type.includes('LOGOUT')) return '🚪';
+    if (type.includes('PRODUCT')) return '📦';
+    if (type.includes('STOCK_RECEIVED')) return '📥';
+    if (type.includes('ORDER')) return '🛒';
+    if (type.includes('USER')) return '👤';
+    if (type.includes('GRN')) return '📄';
+    if (type.includes('TRANSFER')) return '🔄';
+    return '📋';
+}
+
+function formatTransactionType(type) {
+    return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function loadTransactions() {
+    $('#loadingIndicator').show();
+    
+    $.get('/api/transactions', function(transactions) {
+        allTransactions = transactions;
+        applyFilters();
+        $('#loadingIndicator').hide();
+    }).fail(function() {
+        $('#loadingIndicator').hide();
+        $('#transactionsTable').html('<div class="alert alert-danger">Failed to load transactions. Please refresh the page.</div>');
+    });
+}
+
+function applyFilters() {
+    let startDate = $('#startDate').val();
+    let endDate = $('#endDate').val();
+    let typeFilter = $('#typeFilter').val();
+    let userFilter = $('#userFilter').val().toLowerCase();
+    
+    let filtered = allTransactions.filter(function(t) {
+        // Date filter
+        if (startDate && t.timestamp.split(' ')[0] < startDate) return false;
+        if (endDate && t.timestamp.split(' ')[0] > endDate) return false;
+        
+        // Type filter
+        if (typeFilter && t.transaction_type !== typeFilter) return false;
+        
+        // User filter
+        if (userFilter && t.username && !t.username.toLowerCase().includes(userFilter)) return false;
+        
+        return true;
+    });
+    
+    displayTransactions(filtered);
+}
+
+function displayTransactions(transactions) {
+    if (transactions.length === 0) {
+        $('#transactionsTable').html('<div class="alert alert-info">No transactions found for the selected filters.</div>');
+        return;
+    }
+    
+    let html = '<table class="transaction-table">';
+    html += '<thead>';
+    html += '<td>';
+    html += '<th>#</th>';
+    html += '<th>Timestamp</th>';
+    html += '<th>Type</th>';
+    html += '<th>Details</th>';
+    html += '<th>User</th>';
+    html += '</tr>';
+    html += '</thead><tbody>';
+    
+    for (let i = 0; i < transactions.length; i++) {
+        let t = transactions[i];
+        let badgeClass = getTypeBadgeClass(t.transaction_type);
+        let typeIcon = getTypeIcon(t.transaction_type);
+        let typeDisplay = formatTransactionType(t.transaction_type);
+        
+        html += '<tr>';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td><small>' + escapeHtml(t.timestamp) + '</small></td>';
+        html += '<td><span class="type-badge ' + badgeClass + '">' + typeIcon + ' ' + escapeHtml(typeDisplay) + '</span></td>';
+        html += '<td>' + escapeHtml(t.details || '-') + '</td>';
+        html += '<td><strong>' + escapeHtml(t.username || 'system') + '</strong></td>';
+        html += '</tr>';
+    }
+    
+    html += '</tbody>';
+    html += '</table>';
+    $('#transactionsTable').html(html);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function exportToCSV() {
+    let startDate = $('#startDate').val();
+    let endDate = $('#endDate').val();
+    let typeFilter = $('#typeFilter').val();
+    let userFilter = $('#userFilter').val().toLowerCase();
+    
+    let filtered = allTransactions.filter(function(t) {
+        if (startDate && t.timestamp.split(' ')[0] < startDate) return false;
+        if (endDate && t.timestamp.split(' ')[0] > endDate) return false;
+        if (typeFilter && t.transaction_type !== typeFilter) return false;
+        if (userFilter && t.username && !t.username.toLowerCase().includes(userFilter)) return false;
+        return true;
+    });
+    
+    let csvRows = [['S.No', 'Timestamp', 'Transaction Type', 'Details', 'Username']];
+    
+    for (let i = 0; i < filtered.length; i++) {
+        let t = filtered[i];
+        csvRows.push([
+            i + 1,
+            t.timestamp,
+            t.transaction_type,
+            (t.details || '').replace(/,/g, ';'),
+            t.username || 'system'
+        ]);
+    }
+    
+    let csvContent = csvRows.map(function(row) {
+        return row.map(function(cell) {
+            let str = String(cell);
+            if (str.includes(',') || str.includes('"')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }).join(',');
+    }).join('\n');
+    
+    let blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8' });
+    let link = document.createElement('a');
+    let filename = 'transaction_history_' + new Date().toISOString().split('T')[0] + '.csv';
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    alert('✅ Transactions exported to ' + filename);
+}
+
+// Set default dates (last 30 days)
+function setDefaultDates() {
+    let today = new Date();
+    let thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    $('#endDate').val(today.toISOString().split('T')[0]);
+    $('#startDate').val(thirtyDaysAgo.toISOString().split('T')[0]);
+}
+
+$(document).ready(function() {
+    setDefaultDates();
+    loadTransactions();
+    
+    $('#applyFilterBtn').click(applyFilters);
+    $('#resetFilterBtn').click(function() {
+        $('#startDate').val('');
+        $('#endDate').val('');
+        $('#typeFilter').val('');
+        $('#userFilter').val('');
+        setDefaultDates();
+        applyFilters();
+    });
+    $('#exportTransactionsBtn').click(exportToCSV);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,818 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<style>
+    /* Root variables - Optimized for height */
+    :root {
+        --card-padding: 8px 10px;
+        --card-margin: 6px;
+        --card-radius: 8px;
+        --title-font: 11px;
+        --value-font: 18px;
+        --subtitle-font: 9px;
+        --icon-size: 26px;
+        --section-header: 13px;
+        --h2-size: 18px;
+        --quick-padding: 8px 10px;
+    }
+    
+    .container-fluid, .row, .main-content {
+        overflow-x: hidden;
+    }
+    .p-4 {
+        padding: 12px !important;
+    }
+    
+    /* Card Styles */
+    .dashboard-card {
+        background: white;
+        border-radius: var(--card-radius);
+        padding: var(--card-padding);
+        margin-bottom: var(--card-margin);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+        border-left: 3px solid;
+        position: relative;
+        height: 100%;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+    .dashboard-card .card-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: var(--icon-size);
+        color: #6c757d;
+    }
+    .dashboard-card .card-title {
+        font-size: var(--title-font);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: #6c757d;
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+    .dashboard-card .card-value {
+        font-size: var(--value-font);
+        font-weight: 700;
+        margin-bottom: 4px;
+        line-height: 1.2;
+    }
+    .dashboard-card .card-subtitle {
+        font-size: var(--subtitle-font);
+        color: #adb5bd;
+        border-top: 1px solid #e9ecef;
+        padding-top: 4px;
+        margin-top: 4px;
+    }
+    .section-header {
+        font-size: var(--section-header);
+        font-weight: 700;
+        margin: 15px 0 10px 0;
+        padding-bottom: 4px;
+        border-bottom: 2px solid #667eea;
+        color: #2c3e50;
+        display: inline-block;
+    }
+    
+    /* Card Border Colors */
+    .border-total { border-left-color: #4361ee; }
+    .border-cancelled { border-left-color: #ef476f; }
+    .border-returned { border-left-color: #ff9f1c; }
+    .border-net { border-left-color: #06d6a0; }
+    
+    /* Card Value Colors */
+    .value-total { color: #4361ee; }
+    .value-cancelled { color: #ef476f; }
+    .value-returned { color: #ff9f1c; }
+    .value-net { color: #06d6a0; }
+    
+    /* Quick Stats Cards */
+    .quick-stats {
+        border-radius: var(--card-radius);
+        padding: var(--quick-padding);
+        margin-bottom: var(--card-margin);
+        height: 100%;
+        transition: all 0.2s;
+        text-align: center;
+        position: relative;
+    }
+    .quick-stats:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+    .quick-stats .stat-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 30px;
+    }
+    .quick-stats h4 {
+        font-size: var(--title-font);
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+    .quick-stats .stat-number {
+        font-size: var(--value-font);
+        font-weight: 800;
+        margin: 4px 0;
+    }
+    .quick-stats small {
+        font-size: var(--subtitle-font);
+        display: block;
+        margin-top: 3px;
+    }
+    
+    /* Card Colors */
+    .quick-stats.products {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .quick-stats.products .stat-icon {
+        color: rgba(255,255,255,0.7);
+    }
+    .quick-stats.inventory {
+        background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+        color: white;
+    }
+    .quick-stats.inventory .stat-icon {
+        color: rgba(255,255,255,0.7);
+    }
+    .quick-stats.lowstock {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        color: #856404;
+    }
+    .quick-stats.lowstock .stat-icon {
+        color: #856404;
+    }
+    .quick-stats.expired {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        color: #721c24;
+    }
+    .quick-stats.expired .stat-icon {
+        color: #721c24;
+    }
+    
+    .quick-stats.lowstock h4,
+    .quick-stats.lowstock .stat-number,
+    .quick-stats.lowstock small {
+        color: #856404;
+    }
+    .quick-stats.expired h4,
+    .quick-stats.expired .stat-number,
+    .quick-stats.expired small {
+        color: #721c24;
+    }
+    
+    .col-stats { 
+        padding: 0 4px; 
+    }
+    .equal-height { 
+        display: flex; 
+        flex-wrap: wrap; 
+    }
+    
+    .stats-section {
+        margin-bottom: 12px;
+    }
+    .stats-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 -4px;
+    }
+    .stats-col {
+        flex: 1;
+        padding: 0 4px;
+        min-width: 110px;
+    }
+    
+    @media (max-width: 992px) {
+        .stats-col { min-width: 100px; }
+        :root {
+            --value-font: 16px;
+            --title-font: 10px;
+            --icon-size: 22px;
+        }
+        .quick-stats .stat-icon {
+            font-size: 26px;
+        }
+    }
+    @media (max-width: 768px) {
+        .stats-col { min-width: 90px; }
+        :root {
+            --value-font: 14px;
+            --title-font: 9px;
+            --icon-size: 20px;
+        }
+        .quick-stats .stat-icon {
+            font-size: 24px;
+        }
+    }
+    
+    h2 {
+        font-size: var(--h2-size);
+        margin-bottom: 12px !important;
+        color: #2c3e50;
+    }
+    
+    .dashboard-location-badge {
+        display: inline-block;
+        margin-left: 10px;
+        padding: 3px 10px;
+        background-color: #e9ecef !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 20px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #000000 !important;
+    }
+    
+    .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 8px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        display: none;
+        font-size: 12px;
+    }
+    
+    .skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+        display: inline-block;
+        width: 40px;
+        height: 16px;
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+
+<h2 style="display: flex; align-items: center; flex-wrap: wrap;">
+    <span>📊 Dashboard</span>
+    <span id="locationDisplay" class="dashboard-location-badge">Manak_Vihar</span>
+</h2>
+
+<div class="error-message" id="errorMessage">
+    ⚠️ Failed to load data. Please check your connection.
+</div>
+
+<!-- Quick Stats Row -->
+<div class="row equal-height mb-2">
+    <div class="col-md-3 col-sm-6 col-stats">
+        <div class="quick-stats products">
+            <span class="stat-icon">📦</span>
+            <h4>Total Products</h4>
+            <div class="stat-number" id="totalProducts">-</div>
+            <small>Active SKUs</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 col-stats">
+        <div class="quick-stats inventory">
+            <span class="stat-icon">💰</span>
+            <h4>Inventory (MRP)</h4>
+            <div class="stat-number" id="inventoryValue">-</div>
+            <small>Total Stock Value</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 col-stats">
+        <div class="quick-stats lowstock">
+            <span class="stat-icon">⚠️</span>
+            <h4>Low Stock Items</h4>
+            <div class="stat-number" id="lowStock">-</div>
+            <small>Quantity ≤ 5</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 col-stats">
+        <div class="quick-stats expired">
+            <span class="stat-icon">⏰</span>   <!-- Changed from 🛒 to ⏰ -->
+            <h4>Expired Items</h4>
+            <div class="stat-number" id="expiredItems">-</div>
+            <small>Unique SKU + Batch</small>
+        </div>
+    </div>
+</div>
+
+<!-- ========== TODAY'S STATISTICS ========== -->
+<div class="section-header">📅 Today's Statistics</div>
+
+<!-- Today's Orders Row -->
+<div class="stats-section">
+    <div class="stats-row">
+        <div class="stats-col">
+            <div class="dashboard-card border-total">
+                <span class="card-icon">📊</span>
+                <div class="card-title">TODAY'S ORDERS</div>
+                <div class="card-value value-total" id="todayOrders">-</div>
+                <div class="card-subtitle">Total Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-cancelled">
+                <span class="card-icon">❌</span>
+                <div class="card-title">TODAY'S CANCELLED</div>
+                <div class="card-value value-cancelled" id="todayCancelledOrders">-</div>
+                <div class="card-subtitle">Cancelled Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-returned">
+                <span class="card-icon">↩️</span>
+                <div class="card-title">TODAY'S RETURNED</div>
+                <div class="card-value value-returned" id="todayReturnedOrders">-</div>
+                <div class="card-subtitle">Returned Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-net">
+                <span class="card-icon">✅</span>
+                <div class="card-title">TODAY'S NET ORDERS</div>
+                <div class="card-value value-net" id="todayNetOrders">-</div>
+                <div class="card-subtitle">Total - Cancel - Return</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Sales Row -->
+<div class="stats-section">
+    <div class="stats-row">
+        <div class="stats-col">
+            <div class="dashboard-card border-total">
+                <span class="card-icon">💰</span>
+                <div class="card-title">TODAY'S SALES</div>
+                <div class="card-value value-total" id="todaySales">-</div>
+                <div class="card-subtitle">Total Sales Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-cancelled">
+                <span class="card-icon">❌</span>
+                <div class="card-title">TODAY'S CANCELLED</div>
+                <div class="card-value value-cancelled" id="todayCancelledSales">-</div>
+                <div class="card-subtitle">Cancelled Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-returned">
+                <span class="card-icon">↩️</span>
+                <div class="card-title">TODAY'S RETURNED</div>
+                <div class="card-value value-returned" id="todayReturnedSales">-</div>
+                <div class="card-subtitle">Returned Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-net">
+                <span class="card-icon">✅</span>
+                <div class="card-title">TODAY'S NET SALES</div>
+                <div class="card-value value-net" id="todayNetSales">-</div>
+                <div class="card-subtitle">Sales - Cancel - Return</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== YESTERDAY'S STATISTICS ========== -->
+<div class="section-header">📅 Yesterday's Statistics</div>
+
+<!-- Yesterday's Orders Row -->
+<div class="stats-section">
+    <div class="stats-row">
+        <div class="stats-col">
+            <div class="dashboard-card border-total">
+                <span class="card-icon">📊</span>
+                <div class="card-title">YESTERDAY'S ORDERS</div>
+                <div class="card-value value-total" id="yesterdayOrders">-</div>
+                <div class="card-subtitle">Total Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-cancelled">
+                <span class="card-icon">❌</span>
+                <div class="card-title">YESTERDAY'S CANCELLED</div>
+                <div class="card-value value-cancelled" id="yesterdayCancelledOrders">-</div>
+                <div class="card-subtitle">Cancelled Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-returned">
+                <span class="card-icon">↩️</span>
+                <div class="card-title">YESTERDAY'S RETURNED</div>
+                <div class="card-value value-returned" id="yesterdayReturnedOrders">-</div>
+                <div class="card-subtitle">Returned Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-net">
+                <span class="card-icon">✅</span>
+                <div class="card-title">YESTERDAY'S NET ORDERS</div>
+                <div class="card-value value-net" id="yesterdayNetOrders">-</div>
+                <div class="card-subtitle">Total - Cancel - Return</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yesterday's Sales Row -->
+<div class="stats-section">
+    <div class="stats-row">
+        <div class="stats-col">
+            <div class="dashboard-card border-total">
+                <span class="card-icon">💰</span>
+                <div class="card-title">YESTERDAY'S SALES</div>
+                <div class="card-value value-total" id="yesterdaySales">-</div>
+                <div class="card-subtitle">Total Sales Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-cancelled">
+                <span class="card-icon">❌</span>
+                <div class="card-title">YESTERDAY'S CANCELLED</div>
+                <div class="card-value value-cancelled" id="yesterdayCancelledSales">-</div>
+                <div class="card-subtitle">Cancelled Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-returned">
+                <span class="card-icon">↩️</span>
+                <div class="card-title">YESTERDAY'S RETURNED</div>
+                <div class="card-value value-returned" id="yesterdayReturnedSales">-</div>
+                <div class="card-subtitle">Returned Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-net">
+                <span class="card-icon">✅</span>
+                <div class="card-title">YESTERDAY'S NET SALES</div>
+                <div class="card-value value-net" id="yesterdayNetSales">-</div>
+                <div class="card-subtitle">Sales - Cancel - Return</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MTD STATISTICS ========== -->
+<div class="section-header">📅 Month to Date Statistics</div>
+
+<!-- MTD Orders Row -->
+<div class="stats-section">
+    <div class="stats-row">
+        <div class="stats-col">
+            <div class="dashboard-card border-total">
+                <span class="card-icon">📊</span>
+                <div class="card-title">MTD ORDERS</div>
+                <div class="card-value value-total" id="mtdOrders">-</div>
+                <div class="card-subtitle">Total Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-cancelled">
+                <span class="card-icon">❌</span>
+                <div class="card-title">MTD CANCELLED</div>
+                <div class="card-value value-cancelled" id="mtdCancelledOrders">-</div>
+                <div class="card-subtitle">Cancelled Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-returned">
+                <span class="card-icon">↩️</span>
+                <div class="card-title">MTD RETURNED</div>
+                <div class="card-value value-returned" id="mtdReturnedOrders">-</div>
+                <div class="card-subtitle">Returned Orders</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-net">
+                <span class="card-icon">✅</span>
+                <div class="card-title">MTD NET ORDERS</div>
+                <div class="card-value value-net" id="mtdNetOrders">-</div>
+                <div class="card-subtitle">Total - Cancel - Return</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MTD Sales Row -->
+<div class="stats-section">
+    <div class="stats-row">
+        <div class="stats-col">
+            <div class="dashboard-card border-total">
+                <span class="card-icon">💰</span>
+                <div class="card-title">MTD SALES</div>
+                <div class="card-value value-total" id="mtdSales">-</div>
+                <div class="card-subtitle">Total Sales Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-cancelled">
+                <span class="card-icon">❌</span>
+                <div class="card-title">MTD CANCELLED</div>
+                <div class="card-value value-cancelled" id="mtdCancelledSales">-</div>
+                <div class="card-subtitle">Cancelled Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-returned">
+                <span class="card-icon">↩️</span>
+                <div class="card-title">MTD RETURNED</div>
+                <div class="card-value value-returned" id="mtdReturnedSales">-</div>
+                <div class="card-subtitle">Returned Value</div>
+            </div>
+        </div>
+        <div class="stats-col">
+            <div class="dashboard-card border-net">
+                <span class="card-icon">✅</span>
+                <div class="card-title">MTD NET SALES</div>
+                <div class="card-value value-net" id="mtdNetSales">-</div>
+                <div class="card-subtitle">Sales - Cancel - Return</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variable for current location
+var currentLocation = localStorage.getItem('globalLocation') || 'Manak_Vihar';
+var isLoading = false;
+
+function updateLocationDisplay() {
+    var locationDisplay = document.getElementById('locationDisplay');
+    if (locationDisplay) {
+        locationDisplay.innerText = currentLocation;
+    }
+}
+
+function showError(show, message) {
+    var errorDiv = document.getElementById('errorMessage');
+    if (errorDiv) {
+        if (show) {
+            errorDiv.style.display = 'block';
+            if (message) errorDiv.innerText = '⚠️ ' + message;
+            setTimeout(function() {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        } else {
+            errorDiv.style.display = 'none';
+        }
+    }
+}
+
+function formatCurrency(amount) {
+    if (amount === undefined || amount === null || isNaN(amount)) return '₹0.00';
+    return '₹' + parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function loadInventoryData() {
+    try {
+        var response = await fetch('/api/inventory');
+        if (!response.ok) throw new Error('Inventory API failed: ' + response.status);
+        
+        var inventory = await response.json();
+        var inventoryList = Array.isArray(inventory) ? inventory : (inventory.data || inventory.items || []);
+        
+        var locationInventory = inventoryList.filter(function(item) {
+            var itemLocation = item.warehouse_name || item.location || item.warehouse;
+            return itemLocation === currentLocation;
+        });
+        
+        var uniqueSkus = new Set();
+        locationInventory.forEach(function(item) {
+            if (item.sku_code) uniqueSkus.add(item.sku_code);
+        });
+        document.getElementById('totalProducts').innerText = uniqueSkus.size;
+        
+        var totalInventoryMrpValue = locationInventory.reduce(function(sum, item) {
+            var mrp = parseFloat(item.mrp) || 0;
+            var quantity = parseInt(item.quantity) || 0;
+            return sum + (mrp * quantity);
+        }, 0);
+        document.getElementById('inventoryValue').innerHTML = formatCurrency(totalInventoryMrpValue);
+        
+        var lowStockItems = locationInventory.filter(function(item) {
+            var quantity = parseInt(item.quantity) || 0;
+            return quantity <= 5 && quantity > 0;
+        });
+        document.getElementById('lowStock').innerText = lowStockItems.length;
+        
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        var expiredUniqueKeys = new Set();
+        locationInventory.forEach(function(item) {
+            if (item.expiry_date) {
+                var expiryDate = new Date(item.expiry_date);
+                expiryDate.setHours(0, 0, 0, 0);
+                if (expiryDate < today) {
+                    var uniqueKey = (item.sku_code || '') + '|' + (item.batch_number || '');
+                    expiredUniqueKeys.add(uniqueKey);
+                }
+            }
+        });
+        document.getElementById('expiredItems').innerText = expiredUniqueKeys.size;
+        
+        return true;
+    } catch (error) {
+        console.error('Inventory load error:', error);
+        throw error;
+    }
+}
+
+async function loadOrdersData() {
+    try {
+        var response = await fetch('/api/orders');
+        if (!response.ok) throw new Error('Orders API failed: ' + response.status);
+        
+        var orders = await response.json();
+        var ordersList = Array.isArray(orders) ? orders : (orders.data || orders.orders || []);
+        
+        var today = new Date();
+        var yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        var monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        var formatDate = function(date) { 
+            return date.toISOString().split('T')[0]; 
+        };
+        
+        var todayStr = formatDate(today);
+        var yesterdayStr = formatDate(yesterday);
+        var monthStartStr = formatDate(monthStart);
+        
+        var todayOrdersCount = 0, todayCancelledCount = 0, todayReturnedCount = 0;
+        var todaySalesAmount = 0, todayCancelledSales = 0, todayReturnedSales = 0;
+        var yesterdayOrdersCount = 0, yesterdayCancelledCount = 0, yesterdayReturnedCount = 0;
+        var yesterdaySalesAmount = 0, yesterdayCancelledSales = 0, yesterdayReturnedSales = 0;
+        var mtdOrdersCount = 0, mtdCancelledCount = 0, mtdReturnedCount = 0;
+        var mtdSalesAmount = 0, mtdCancelledSales = 0, mtdReturnedSales = 0;
+        
+        ordersList.forEach(function(order) {
+            var orderDate = order.order_date || order.date || (order.created_on ? order.created_on.split(' ')[0] : '');
+            if (!orderDate) return;
+            
+            var orderAmount = 0;
+            var items = order.items || order.products || [];
+            if (items.length) {
+                items.forEach(function(item) { 
+                    orderAmount += parseFloat(item.sale_value) || parseFloat(item.amount) || parseFloat(item.price) || 0; 
+                });
+            } else {
+                orderAmount = parseFloat(order.total_amount) || parseFloat(order.amount) || 0;
+            }
+            
+            var isCancelled = order.order_status === 'Cancelled' || order.status === 'Cancelled';
+            var isReturned = order.order_status === 'Returned' || order.status === 'Returned';
+            
+            var locationMatch = false;
+            if (items.length) {
+                locationMatch = items.some(function(item) { 
+                    var itemLocation = item.warehouse_name || item.location || item.warehouse;
+                    return itemLocation === currentLocation; 
+                });
+            } else {
+                locationMatch = (order.warehouse_name === currentLocation) || (order.location === currentLocation);
+            }
+            
+            if (!locationMatch) return;
+            
+            if (orderDate === todayStr) {
+                todayOrdersCount++;
+                todaySalesAmount += orderAmount;
+                if (isCancelled) { 
+                    todayCancelledCount++; 
+                    todayCancelledSales += orderAmount; 
+                }
+                if (isReturned) { 
+                    todayReturnedCount++; 
+                    todayReturnedSales += orderAmount; 
+                }
+            }
+            
+            if (orderDate === yesterdayStr) {
+                yesterdayOrdersCount++;
+                yesterdaySalesAmount += orderAmount;
+                if (isCancelled) { 
+                    yesterdayCancelledCount++; 
+                    yesterdayCancelledSales += orderAmount; 
+                }
+                if (isReturned) { 
+                    yesterdayReturnedCount++; 
+                    yesterdayReturnedSales += orderAmount; 
+                }
+            }
+            
+            if (orderDate >= monthStartStr && orderDate <= todayStr) {
+                mtdOrdersCount++;
+                mtdSalesAmount += orderAmount;
+                if (isCancelled) { 
+                    mtdCancelledCount++; 
+                    mtdCancelledSales += orderAmount; 
+                }
+                if (isReturned) { 
+                    mtdReturnedCount++; 
+                    mtdReturnedSales += orderAmount; 
+                }
+            }
+        });
+        
+        // Today
+        document.getElementById('todayOrders').innerText = todayOrdersCount;
+        document.getElementById('todayCancelledOrders').innerText = todayCancelledCount;
+        document.getElementById('todayReturnedOrders').innerText = todayReturnedCount;
+        document.getElementById('todayNetOrders').innerText = todayOrdersCount - todayCancelledCount - todayReturnedCount;
+        document.getElementById('todaySales').innerHTML = formatCurrency(todaySalesAmount);
+        document.getElementById('todayCancelledSales').innerHTML = formatCurrency(todayCancelledSales);
+        document.getElementById('todayReturnedSales').innerHTML = formatCurrency(todayReturnedSales);
+        document.getElementById('todayNetSales').innerHTML = formatCurrency(todaySalesAmount - todayCancelledSales - todayReturnedSales);
+        
+        // Yesterday
+        document.getElementById('yesterdayOrders').innerText = yesterdayOrdersCount;
+        document.getElementById('yesterdayCancelledOrders').innerText = yesterdayCancelledCount;
+        document.getElementById('yesterdayReturnedOrders').innerText = yesterdayReturnedCount;
+        document.getElementById('yesterdayNetOrders').innerText = yesterdayOrdersCount - yesterdayCancelledCount - yesterdayReturnedCount;
+        document.getElementById('yesterdaySales').innerHTML = formatCurrency(yesterdaySalesAmount);
+        document.getElementById('yesterdayCancelledSales').innerHTML = formatCurrency(yesterdayCancelledSales);
+        document.getElementById('yesterdayReturnedSales').innerHTML = formatCurrency(yesterdayReturnedSales);
+        document.getElementById('yesterdayNetSales').innerHTML = formatCurrency(yesterdaySalesAmount - yesterdayCancelledSales - yesterdayReturnedSales);
+        
+        // MTD
+        document.getElementById('mtdOrders').innerText = mtdOrdersCount;
+        document.getElementById('mtdCancelledOrders').innerText = mtdCancelledCount;
+        document.getElementById('mtdReturnedOrders').innerText = mtdReturnedCount;
+        document.getElementById('mtdNetOrders').innerText = mtdOrdersCount - mtdCancelledCount - mtdReturnedCount;
+        document.getElementById('mtdSales').innerHTML = formatCurrency(mtdSalesAmount);
+        document.getElementById('mtdCancelledSales').innerHTML = formatCurrency(mtdCancelledSales);
+        document.getElementById('mtdReturnedSales').innerHTML = formatCurrency(mtdReturnedSales);
+        document.getElementById('mtdNetSales').innerHTML = formatCurrency(mtdSalesAmount - mtdCancelledSales - mtdReturnedSales);
+        
+        return true;
+    } catch (error) {
+        console.error('Orders load error:', error);
+        throw error;
+    }
+}
+
+async function loadDashboardData() {
+    if (isLoading) return;
+    isLoading = true;
+    
+    updateLocationDisplay();
+    showError(false);
+    
+    try {
+        await Promise.all([
+            loadInventoryData(),
+            loadOrdersData()
+        ]);
+    } catch (error) {
+        console.error('Dashboard data load error:', error);
+        showError(true, 'Failed to load dashboard data. Please refresh the page.');
+    } finally {
+        isLoading = false;
+    }
+}
+
+function handleLocationChange(newLocation) {
+    if (newLocation !== currentLocation) {
+        currentLocation = newLocation;
+        updateLocationDisplay();
+        loadDashboardData();
+    }
+}
+
+function getInitialLocation() {
+    var storedLocation = localStorage.getItem('globalLocation');
+    if (storedLocation) {
+        currentLocation = storedLocation;
+    }
+    updateLocationDisplay();
+}
+
+window.addEventListener('storage', function(e) {
+    if (e.key === 'globalLocation' && e.newValue !== e.oldValue) {
+        handleLocationChange(e.newValue || 'Manak_Vihar');
+    }
+});
+
+window.addEventListener('locationChanged', function(e) {
+    if (e.detail && e.detail.location) {
+        handleLocationChange(e.detail.location);
+    }
+});
+
+$(document).ready(function() {
+    getInitialLocation();
+    loadDashboardData();
+});
+</script>
+{% endblock %}

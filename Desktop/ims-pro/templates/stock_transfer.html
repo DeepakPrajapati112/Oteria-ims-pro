@@ -1,0 +1,1044 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .transfer-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+    .transfer-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -20px -20px 20px -20px;
+    }
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #333;
+        border-left: 3px solid #667eea;
+        padding-left: 10px;
+    }
+    .selected-item-row {
+        background: #e9ecef;
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border-left: 3px solid #28a745;
+    }
+    .transfer-detail-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+    .transfer-detail-card.received {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+    }
+    .transfer-detail-card.pending {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+    .bin-chip {
+        background: #667eea;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 15px;
+        font-size: 11px;
+        display: inline-block;
+    }
+    .btn-transfer {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        font-weight: bold;
+        padding: 12px;
+        font-size: 16px;
+        transition: all 0.3s;
+    }
+    .btn-transfer:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .receive-item-row {
+        background: #fff3cd;
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border-left: 3px solid #ffc107;
+    }
+    .info-note {
+        background: #e7f3ff;
+        border-left: 4px solid #2196F3;
+        padding: 8px 12px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+        font-size: 12px;
+    }
+    .item-row {
+        background: #f8f9fa;
+        transition: background 0.2s;
+    }
+    .item-row:hover {
+        background: #e9ecef;
+    }
+    .status-badge-received {
+        background: #28a745;
+        color: white;
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 11px;
+    }
+    .status-badge-pending {
+        background: #ffc107;
+        color: #333;
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 11px;
+    }
+    /* Fixed styles for View Items table */
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .items-table th,
+    .items-table td {
+        border: 1px solid #dee2e6;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .items-table th {
+        background-color: #343a40;
+        color: white;
+        font-weight: 600;
+    }
+    .items-table tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+    
+    /* ========== PURE CSS TABS (NO BOOTSTRAP JS REQUIRED) ========== */
+    .custom-tabs {
+        display: flex;
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .custom-tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-bottom: none;
+        margin-right: 5px;
+        border-radius: 8px 8px 0 0;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .custom-tab:hover {
+        background: #e9ecef;
+    }
+    .custom-tab.active {
+        background: white;
+        border-bottom: 2px solid white;
+        margin-bottom: -2px;
+        color: #667eea;
+        font-weight: 600;
+    }
+    .custom-tab-content {
+        display: none;
+    }
+    .custom-tab-content.active {
+        display: block;
+    }
+</style>
+
+<h2>🔄 Stock Transfer Management</h2>
+
+<div class="info-note">
+    <strong>📌 Note:</strong> Destination Bin is NOT required during transfer creation. 
+    You will assign bins when receiving the transfer at destination warehouse.
+</div>
+
+<!-- ========== PURE CSS TABS (NO BOOTSTRAP JS) ========== -->
+<div class="custom-tabs">
+    <div class="custom-tab active" data-tab="createTransfer">📦 Create Transfer</div>
+    <div class="custom-tab" data-tab="receiveTransfer">📥 Receive Transfer</div>
+    <div class="custom-tab" data-tab="transferHistory">📋 Transfer History</div>
+    <div class="custom-tab" data-tab="transferReport">📊 Transfer Report</div>
+</div>
+
+<!-- CREATE TRANSFER TAB CONTENT -->
+<div id="tab-createTransfer" class="custom-tab-content active">
+    <div class="transfer-card">
+        <div class="transfer-header">
+            <h5 class="mb-0">🔄 Create Stock Transfer</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="required">From Warehouse</label>
+                        <select class="form-control" id="fromWarehouse">
+                            <option value="">Select Source Warehouse</option>
+                            <option value="Manak_Vihar">📍 Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">📍 Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="required">To Warehouse</label>
+                        <select class="form-control" id="toWarehouse">
+                            <option value="">Select Destination Warehouse</option>
+                            <option value="Manak_Vihar">📍 Manak Vihar, Delhi</option>
+                            <option value="Kaushambi">📍 Kaushambi, Ghaziabad</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Transfer Date</label>
+                        <input type="date" class="form-control" id="transferDate">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Transfer Reference No</label>
+                        <input type="text" class="form-control" id="transferRefNo" placeholder="Auto-generated">
+                        <small class="text-muted">Leave empty for auto</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Transfer Reason</label>
+                        <input type="text" class="form-control" id="transferReason" placeholder="e.g., Stock balancing">
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="section-title">🔍 Select Items to Transfer</div>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchSkuInput" placeholder="🔍 Search by SKU or Product Name...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" id="searchBinSelect">
+                        <option value="">All Bins</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" id="searchStockBtn">🔍 Search Stock</button>
+                </div>
+                <div class="col-md-3">
+                    <div class="alert alert-info" style="padding: 8px; margin: 0;">
+                        <small>Source: <span id="selectedWarehouseDisplay">Not selected</span></small>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="loadingIndicator" style="display: none;" class="alert alert-info">
+                <i class="bi bi-hourglass-split"></i> Loading stock items...
+            </div>
+            
+            <div id="availableItemsContainer" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="40">#</th>
+                                <th>SKU Code</th>
+                                <th>Product Name</th>
+                                <th>Batch No</th>
+                                <th>Bin No</th>
+                                <th>Available Qty</th>
+                                <th>Expiry Date</th>
+                                <th width="100">Transfer Qty</th>
+                                <th width="80">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="availableStockList"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="noItemsMessage" style="display: none;" class="alert alert-warning">
+                No items found in selected warehouse.
+            </div>
+            
+            <hr>
+            
+            <div class="section-title">📋 Transfer Items</div>
+            <div id="transferItemsContainer">
+                <div class="alert alert-info" id="emptyTransferMsg">No items added to transfer. Select items above.</div>
+                <div id="transferItemsList"></div>
+            </div>
+            
+            <div class="row mt-3" id="transferSummary" style="display: none;">
+                <div class="col-md-12">
+                    <div class="alert alert-success">
+                        <strong>📊 Transfer Summary:</strong>
+                        Total Items: <span id="summaryTotalItems">0</span> | 
+                        Total Quantity: <span id="summaryTotalQuantity">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn btn-transfer w-100 mt-3" id="createTransferBtn">✅ Confirm & Create Transfer</button>
+            <div id="transferMsg" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<!-- RECEIVE TRANSFER TAB CONTENT -->
+<div id="tab-receiveTransfer" class="custom-tab-content">
+    <div class="transfer-card">
+        <div class="transfer-header">
+            <h5 class="mb-0">📥 Receive Incoming Stock Transfer</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Enter Transfer ID to Receive</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="receiveTransferId" placeholder="e.g., TRF-20260508132641">
+                            <button class="btn btn-info" id="searchTransferBtn">🔍 Search Transfer</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Receive Date</label>
+                        <input type="date" class="form-control" id="receiveDate">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="transferDetailsSection" style="display: none;">
+                <hr>
+                <div class="alert alert-info" id="transferInfo"></div>
+                <div class="section-title">📦 Items to Receive - Assign Bin & Location</div>
+                <div class="info-note">
+                    <strong>ℹ️ Important:</strong> Only bins from the destination warehouse will be shown.
+                </div>
+                <div id="receiveItemsList"></div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <label>Receive Remarks</label>
+                        <textarea class="form-control" id="receiveRemarks" rows="2"></textarea>
+                    </div>
+                </div>
+                <button class="btn btn-success w-100 mt-3" id="confirmReceiveBtn">✅ Confirm Receive & Update Stock</button>
+            </div>
+            <div id="receiveMsg" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TRANSFER HISTORY TAB CONTENT -->
+<div id="tab-transferHistory" class="custom-tab-content">
+    <div class="transfer-card">
+        <div class="transfer-header">
+            <h5 class="mb-0">📋 Stock Transfer History</h5>
+        </div>
+        <div class="card-body">
+            <div id="transferHistoryList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TRANSFER REPORT TAB CONTENT -->
+<div id="tab-transferReport" class="custom-tab-content">
+    <div class="transfer-card">
+        <div class="transfer-header">
+            <h5 class="mb-0">📊 Stock Transfer Report</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label>Start Date</label>
+                    <input type="date" class="form-control" id="reportStartDate">
+                </div>
+                <div class="col-md-4">
+                    <label>End Date</label>
+                    <input type="date" class="form-control" id="reportEndDate">
+                </div>
+                <div class="col-md-4">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary w-100" id="generateReportBtn">📊 Generate Report</button>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <button class="btn btn-success w-100" id="downloadReportBtn">📥 Download CSV</button>
+                </div>
+            </div>
+            <div id="transferReportTable" class="table-responsive"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+var allInventoryItems = [];
+var selectedTransferItems = [];
+
+// Bins based on warehouse
+var manakBins = ['A-01', 'A-02', 'A-03', 'A-04', 'B-01', 'B-02', 'B-03', 'B-04', 
+                 'C-01', 'C-02', 'C-03', 'C-04', 'D-01', 'D-02', 'D-03', 'D-04', 
+                 'E-01', 'E-02', 'E-03', 'E-04', 'F-02', 'F-03', 'G-01', 'G-02', 'G-03', 'G-04'];
+
+var kaushambiBins = [
+    'K-A01', 'K-A02', 'K-A03', 'K-A04',
+    'K-B01', 'K-B02', 'K-B03', 'K-B04',
+    'K-C01', 'K-C02', 'K-C03', 'K-C04',
+    'K-D01', 'K-D02', 'K-D03', 'K-D04'
+];
+
+// ========== PURE CSS TABS FUNCTIONALITY ==========
+document.querySelectorAll('.custom-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+        // Remove active class from all tabs and contents
+        document.querySelectorAll('.custom-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.custom-tab-content').forEach(function(c) { c.classList.remove('active'); });
+        
+        // Add active class to clicked tab
+        this.classList.add('active');
+        
+        // Show corresponding content
+        var tabId = this.getAttribute('data-tab');
+        document.getElementById('tab-' + tabId).classList.add('active');
+    });
+});
+
+function setDefaultDates() {
+    var today = new Date().toISOString().split('T')[0];
+    if(document.getElementById('transferDate')) document.getElementById('transferDate').value = today;
+    if(document.getElementById('receiveDate')) document.getElementById('receiveDate').value = today;
+    if(document.getElementById('reportStartDate')) {
+        var firstDay = new Date();
+        firstDay.setDate(1);
+        document.getElementById('reportStartDate').value = firstDay.toISOString().split('T')[0];
+    }
+    if(document.getElementById('reportEndDate')) document.getElementById('reportEndDate').value = today;
+}
+
+function loadInventory() {
+    return fetch('/api/inventory')
+        .then(function(response) {
+            if (!response.ok) throw new Error('API error: ' + response.status);
+            return response.json();
+        })
+        .then(function(data) {
+            allInventoryItems = data;
+            console.log('Inventory loaded:', allInventoryItems.length, 'items');
+            return data;
+        })
+        .catch(function(error) {
+            console.error('Failed to load inventory:', error);
+            return [];
+        });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function searchStock() {
+    var fromWarehouse = document.getElementById('fromWarehouse').value;
+    var searchSku = document.getElementById('searchSkuInput').value.trim().toUpperCase();
+    var searchBin = document.getElementById('searchBinSelect').value;
+    
+    if (!fromWarehouse) {
+        alert('Please select source warehouse first!');
+        return;
+    }
+    
+    document.getElementById('selectedWarehouseDisplay').innerHTML = 
+        fromWarehouse === 'Manak_Vihar' ? 'Manak Vihar, Delhi' : 'Kaushambi, Ghaziabad';
+    
+    document.getElementById('loadingIndicator').style.display = 'block';
+    document.getElementById('availableItemsContainer').style.display = 'none';
+    document.getElementById('noItemsMessage').style.display = 'none';
+    
+    setTimeout(function() {
+        var filtered = [];
+        for (var i = 0; i < allInventoryItems.length; i++) {
+            var item = allInventoryItems[i];
+            if (item.warehouse_name === fromWarehouse && item.quantity > 0 && item.condition === 'Good') {
+                if (searchSku && !item.sku_code.toUpperCase().includes(searchSku) && 
+                    !item.product_name.toUpperCase().includes(searchSku)) {
+                    continue;
+                }
+                if (searchBin && item.bin_no !== searchBin) {
+                    continue;
+                }
+                filtered.push(item);
+            }
+        }
+        
+        document.getElementById('loadingIndicator').style.display = 'none';
+        
+        if (filtered.length === 0) {
+            document.getElementById('noItemsMessage').style.display = 'block';
+            return;
+        }
+        
+        var bins = filtered.map(function(item) { return item.bin_no; }).filter(function(b, i, a) { return b && a.indexOf(b) === i; });
+        var binSelect = document.getElementById('searchBinSelect');
+        binSelect.innerHTML = '<option value="">All Bins</option>';
+        for (var i = 0; i < bins.length; i++) {
+            binSelect.innerHTML += '<option value="' + escapeHtml(bins[i]) + '">' + escapeHtml(bins[i]) + '</option>';
+        }
+        
+        var tbody = document.getElementById('availableStockList');
+        var html = '';
+        
+        for (var i = 0; i < filtered.length; i++) {
+            var item = filtered[i];
+            var itemBin = item.bin_no || 'NO_BIN';
+            html += '<tr class="item-row" data-sku="' + escapeHtml(item.sku_code) + 
+                    '" data-name="' + escapeHtml(item.product_name) + 
+                    '" data-batch="' + escapeHtml(item.batch_number) + 
+                    '" data-bin="' + escapeHtml(itemBin) + 
+                    '" data-max-qty="' + item.quantity + '">';
+            html += '<td>' + (i + 1) + '</td>';
+            html += '<td><strong>' + escapeHtml(item.sku_code) + '</strong></td>';
+            html += '<td>' + escapeHtml(item.product_name) + '</td>';
+            html += '<td>' + escapeHtml(item.batch_number) + '</td>';
+            html += '<td><span class="bin-chip">' + escapeHtml(itemBin) + '</span></td>';
+            html += '<td>' + item.quantity + '</td>';
+            html += '<td>' + (item.expiry_date || '-') + '</td>';
+            html += '<td><input type="number" class="form-control form-control-sm transfer-qty" placeholder="Qty" min="1" max="' + item.quantity + '" style="width: 90px;"></td>';
+            html += '<td><button class="btn btn-success btn-sm add-to-transfer-btn">➕ Add</button></td>';
+            html += '</tr>';
+        }
+        
+        tbody.innerHTML = html;
+        document.getElementById('availableItemsContainer').style.display = 'block';
+        
+        var addBtns = document.querySelectorAll('.add-to-transfer-btn');
+        for (var i = 0; i < addBtns.length; i++) {
+            addBtns[i].addEventListener('click', addToTransfer);
+        }
+    }, 100);
+}
+
+function addToTransfer() {
+    var row = this.closest('tr');
+    if (!row) {
+        alert('Error: Could not find item row');
+        return;
+    }
+    
+    var sku = row.getAttribute('data-sku');
+    var name = row.getAttribute('data-name');
+    var batch = row.getAttribute('data-batch');
+    var sourceBin = row.getAttribute('data-bin');
+    var maxQty = parseInt(row.getAttribute('data-max-qty'));
+    
+    var qtyInput = row.querySelector('.transfer-qty');
+    var transferQty = parseInt(qtyInput.value);
+    
+    if (!transferQty || transferQty <= 0) {
+        alert('Please enter valid transfer quantity');
+        return;
+    }
+    
+    if (transferQty > maxQty) {
+        alert('Quantity cannot exceed available stock (' + maxQty + ')');
+        return;
+    }
+    
+    for (var i = 0; i < selectedTransferItems.length; i++) {
+        if (selectedTransferItems[i].sku_code === sku && selectedTransferItems[i].batch_number === batch) {
+            alert('This item with same batch is already added to transfer');
+            return;
+        }
+    }
+    
+    selectedTransferItems.push({
+        sku_code: sku,
+        product_name: name,
+        batch_number: batch,
+        bin_no: sourceBin,
+        quantity: transferQty
+    });
+    
+    qtyInput.value = '';
+    updateTransferList();
+}
+
+function updateTransferList() {
+    var container = document.getElementById('transferItemsList');
+    var emptyMsg = document.getElementById('emptyTransferMsg');
+    var summaryDiv = document.getElementById('transferSummary');
+    
+    if (selectedTransferItems.length === 0) {
+        emptyMsg.style.display = 'block';
+        container.innerHTML = '';
+        summaryDiv.style.display = 'none';
+        return;
+    }
+    
+    emptyMsg.style.display = 'none';
+    var html = '';
+    var totalQty = 0;
+    
+    for (var i = 0; i < selectedTransferItems.length; i++) {
+        var item = selectedTransferItems[i];
+        totalQty += item.quantity;
+        html += '<div class="selected-item-row" data-index="' + i + '">';
+        html += '<div class="row">';
+        html += '<div class="col-md-3"><strong>SKU:</strong> ' + escapeHtml(item.sku_code) + '<br><small>' + escapeHtml(item.product_name) + '</small></div>';
+        html += '<div class="col-md-2"><strong>Batch:</strong> ' + escapeHtml(item.batch_number) + '</div>';
+        html += '<div class="col-md-2"><strong>Source Bin:</strong> <span class="bin-chip">' + escapeHtml(item.bin_no) + '</span></div>';
+        html += '<div class="col-md-2"><strong>Quantity:</strong> ' + item.quantity + '</div>';
+        html += '<div class="col-md-2"><input type="text" class="form-control form-control-sm item-remark" placeholder="Remarks" data-index="' + i + '"></div>';
+        html += '<div class="col-md-1"><button class="btn btn-danger btn-sm remove-item" data-index="' + i + '">🗑</button></div>';
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    container.innerHTML = html;
+    summaryDiv.style.display = 'block';
+    document.getElementById('summaryTotalItems').innerHTML = selectedTransferItems.length;
+    document.getElementById('summaryTotalQuantity').innerHTML = totalQty;
+    
+    var removeBtns = document.querySelectorAll('.remove-item');
+    for (var i = 0; i < removeBtns.length; i++) {
+        removeBtns[i].addEventListener('click', function() {
+            var index = parseInt(this.getAttribute('data-index'));
+            selectedTransferItems.splice(index, 1);
+            updateTransferList();
+        });
+    }
+}
+
+document.getElementById('createTransferBtn').addEventListener('click', function() {
+    var fromWarehouse = document.getElementById('fromWarehouse').value;
+    var toWarehouse = document.getElementById('toWarehouse').value;
+    var transferDate = document.getElementById('transferDate').value;
+    var transferRefNo = document.getElementById('transferRefNo').value.trim();
+    var transferReason = document.getElementById('transferReason').value;
+    var msgDiv = document.getElementById('transferMsg');
+    
+    if (!fromWarehouse) { msgDiv.innerHTML = '<div class="alert alert-danger">Please select source warehouse</div>'; return; }
+    if (!toWarehouse) { msgDiv.innerHTML = '<div class="alert alert-danger">Please select destination warehouse</div>'; return; }
+    if (fromWarehouse === toWarehouse) { msgDiv.innerHTML = '<div class="alert alert-danger">Source and destination warehouses cannot be same</div>'; return; }
+    if (selectedTransferItems.length === 0) { msgDiv.innerHTML = '<div class="alert alert-danger">No items added to transfer</div>'; return; }
+    
+    var items = [];
+    for (var i = 0; i < selectedTransferItems.length; i++) {
+        var item = selectedTransferItems[i];
+        var remarkInput = document.querySelector('.item-remark[data-index="' + i + '"]');
+        items.push({
+            sku_code: item.sku_code,
+            product_name: item.product_name,
+            batch_number: item.batch_number,
+            bin_no: item.bin_no,
+            quantity: item.quantity,
+            remarks: remarkInput ? remarkInput.value : ''
+        });
+    }
+    
+    msgDiv.innerHTML = '<div class="alert alert-info">Creating transfer...</div>';
+    
+    fetch('/api/stock-transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            from_warehouse: fromWarehouse,
+            to_warehouse: toWarehouse,
+            transfer_date: transferDate,
+            transfer_reason: transferReason,
+            transfer_ref_no: transferRefNo,
+            items: items
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            msgDiv.innerHTML = '<div class="alert alert-success">✅ ' + data.message + '<br>Transfer ID: ' + data.transfer_id + '</div>';
+            selectedTransferItems = [];
+            updateTransferList();
+            document.getElementById('fromWarehouse').value = '';
+            document.getElementById('toWarehouse').value = '';
+            document.getElementById('searchSkuInput').value = '';
+            document.getElementById('availableItemsContainer').style.display = 'none';
+            document.getElementById('transferRefNo').value = '';
+            loadTransferHistory();
+            loadInventory();
+            setTimeout(function() { msgDiv.innerHTML = ''; }, 5000);
+        } else {
+            msgDiv.innerHTML = '<div class="alert alert-danger">❌ ' + data.error + '</div>';
+        }
+    });
+});
+
+// Search transfer to receive
+document.getElementById('searchTransferBtn').addEventListener('click', function() {
+    var transferId = document.getElementById('receiveTransferId').value.trim();
+    if (!transferId) {
+        alert('Please enter Transfer ID');
+        return;
+    }
+    
+    fetch('/api/stock-transfer')
+        .then(function(response) { return response.json(); })
+        .then(function(transfers) {
+            var transfer = null;
+            for (var i = 0; i < transfers.length; i++) {
+                if (transfers[i].transfer_id === transferId) {
+                    transfer = transfers[i];
+                    break;
+                }
+            }
+            
+            if (!transfer) {
+                document.getElementById('transferDetailsSection').style.display = 'none';
+                document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-danger">Transfer not found</div>';
+                return;
+            }
+            
+            var toWarehouse = transfer.items && transfer.items.length > 0 ? transfer.items[0].to_warehouse : '';
+            var isReceived = transfer.items && transfer.items[0] && transfer.items[0].received_date;
+            
+            if (isReceived) {
+                document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-warning">⚠️ This transfer has already been received on ' + transfer.items[0].received_date + '</div>';
+                document.getElementById('transferDetailsSection').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('transferInfo').innerHTML = '<strong>Transfer ID:</strong> ' + transfer.transfer_id + 
+                ' | <strong>From:</strong> ' + transfer.details;
+            
+            var destinationBins = (toWarehouse === 'Kaushambi') ? kaushambiBins : manakBins;
+            
+            var receiveHtml = '';
+            for (var i = 0; i < transfer.items.length; i++) {
+                var item = transfer.items[i];
+                receiveHtml += '<div class="receive-item-row">';
+                receiveHtml += '<div class="row">';
+                receiveHtml += '<div class="col-md-3"><strong>SKU:</strong> ' + escapeHtml(item.sku_code) + '<br><small>' + escapeHtml(item.product_name) + '</small></div>';
+                receiveHtml += '<div class="col-md-2"><strong>Batch:</strong> ' + escapeHtml(item.batch_number) + '</div>';
+                receiveHtml += '<div class="col-md-2"><strong>Source Bin:</strong> <span class="bin-chip">' + escapeHtml(item.bin_no) + '</span></div>';
+                receiveHtml += '<div class="col-md-2"><strong>Quantity:</strong> ' + item.quantity + '</div>';
+                receiveHtml += '<div class="col-md-3"><label>Destination Bin *:</label>';
+                receiveHtml += '<select class="form-control dest-bin-select" data-item-index="' + i + '">';
+                receiveHtml += '<option value="">-- Select Bin --</option>';
+                for (var j = 0; j < destinationBins.length; j++) {
+                    receiveHtml += '<option value="' + destinationBins[j] + '">' + destinationBins[j] + '</option>';
+                }
+                receiveHtml += '</select></div>';
+                receiveHtml += '</div>';
+                receiveHtml += '<div class="row mt-2">';
+                receiveHtml += '<div class="col-md-12"><label>Location Code:</label>';
+                receiveHtml += '<input type="text" class="form-control location-code-input" data-item-index="' + i + '" placeholder="e.g., SHELF-A1">';
+                receiveHtml += '</div></div>';
+                receiveHtml += '</div>';
+            }
+            
+            document.getElementById('receiveItemsList').innerHTML = receiveHtml;
+            document.getElementById('transferDetailsSection').style.display = 'block';
+            document.getElementById('receiveMsg').innerHTML = '';
+        });
+});
+
+// Confirm receive
+document.getElementById('confirmReceiveBtn').addEventListener('click', function() {
+    var transferId = document.getElementById('receiveTransferId').value.trim();
+    var receiveDate = document.getElementById('receiveDate').value;
+    var receiveRemarks = document.getElementById('receiveRemarks').value;
+    var binSelects = document.querySelectorAll('.dest-bin-select');
+    var locationInputs = document.querySelectorAll('.location-code-input');
+    
+    var missingBins = false;
+    for (var i = 0; i < binSelects.length; i++) {
+        if (!binSelects[i].value) {
+            missingBins = true;
+            binSelects[i].style.border = '1px solid red';
+        } else {
+            binSelects[i].style.border = '';
+        }
+    }
+    
+    if (missingBins) {
+        document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-danger">❌ Please select destination bin for all items</div>';
+        return;
+    }
+    
+    var receivedItems = [];
+    for (var i = 0; i < binSelects.length; i++) {
+        receivedItems.push({
+            dest_bin: binSelects[i].value,
+            location_code: locationInputs[i] ? locationInputs[i].value : ''
+        });
+    }
+    
+    document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-info">Processing receive...</div>';
+    
+    fetch('/api/stock-transfer/receive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            transfer_id: transferId,
+            receive_date: receiveDate,
+            received_items: receivedItems,
+            remarks: receiveRemarks
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-success">✅ ' + data.message + '</div>';
+            document.getElementById('transferDetailsSection').style.display = 'none';
+            document.getElementById('receiveTransferId').value = '';
+            document.getElementById('receiveRemarks').value = '';
+            loadInventory();
+            loadTransferHistory();
+            setTimeout(function() { document.getElementById('receiveMsg').innerHTML = ''; }, 3000);
+        } else {
+            document.getElementById('receiveMsg').innerHTML = '<div class="alert alert-danger">❌ ' + data.error + '</div>';
+        }
+    });
+});
+
+function loadTransferHistory() {
+    fetch('/api/stock-transfer')
+        .then(function(response) { return response.json(); })
+        .then(function(transfers) {
+            var historyDiv = document.getElementById('transferHistoryList');
+            if (!transfers || transfers.length === 0) {
+                historyDiv.innerHTML = '<div class="alert alert-info">No transfers found</div>';
+                return;
+            }
+            
+            var html = '';
+            for (var i = 0; i < transfers.length; i++) {
+                var t = transfers[i];
+                var isReceived = t.items && t.items.length > 0 && t.items[0].received_date;
+                var statusClass = isReceived ? 'received' : 'pending';
+                var statusText = isReceived ? '✅ Received' : '⏳ Pending';
+                
+                html += '<div class="transfer-detail-card ' + statusClass + '">';
+                html += '<div class="row">';
+                html += '<div class="col-md-3"><strong>ID:</strong> ' + escapeHtml(t.transfer_id) + '</div>';
+                html += '<div class="col-md-3"><strong>Date:</strong> ' + escapeHtml(t.timestamp) + '</div>';
+                html += '<div class="col-md-3"><strong>By:</strong> ' + escapeHtml(t.username) + '</div>';
+                html += '<div class="col-md-3"><strong>Status:</strong> <span class="' + (isReceived ? 'status-badge-received' : 'status-badge-pending') + '">' + statusText + '</span></div>';
+                html += '</div>';
+                html += '<div class="row mt-1"><div class="col-md-12"><strong>Details:</strong> ' + escapeHtml(t.details) + '</div></div>';
+                
+                if (t.items && t.items.length > 0) {
+                    html += '<div class="row mt-2"><div class="col-md-12">';
+                    html += '<button class="btn btn-sm btn-primary view-transfer-items" data-transfer-id="' + t.transfer_id + '">View Items</button>';
+                    html += '<div id="transfer-items-' + t.transfer_id.replace(/[^a-zA-Z0-9]/g, '_') + '" style="display:none; margin-top:10px;"></div>';
+                    html += '</div></div>';
+                }
+                html += '</div>';
+            }
+            historyDiv.innerHTML = html;
+            
+            var viewBtns = document.querySelectorAll('.view-transfer-items');
+            for (var i = 0; i < viewBtns.length; i++) {
+                viewBtns[i].addEventListener('click', function() {
+                    var transferId = this.getAttribute('data-transfer-id');
+                    var safeId = transferId.replace(/[^a-zA-Z0-9]/g, '_');
+                    var itemsDiv = document.getElementById('transfer-items-' + safeId);
+                    if (itemsDiv.style.display === 'none') {
+                        for (var j = 0; j < transfers.length; j++) {
+                            if (transfers[j].transfer_id === transferId && transfers[j].items) {
+                                var items = transfers[j].items;
+                                var itemsHtml = '<div class="table-responsive" style="margin-top: 10px;">';
+                                itemsHtml += '<table class="items-table">';
+                                itemsHtml += '<thead>';
+                                itemsHtml += '<tr>';
+                                itemsHtml += '<th>SKU Code</th>';
+                                itemsHtml += '<th>Product Name</th>';
+                                itemsHtml += '<th>Batch No</th>';
+                                itemsHtml += '<th>Source Bin</th>';
+                                itemsHtml += '<th>Qty</th>';
+                                itemsHtml += '<th>Dest Bin</th>';
+                                itemsHtml += '<th>Location Code</th>';
+                                itemsHtml += '<th>Received Date</th>';
+                                itemsHtml += '</tr>';
+                                itemsHtml += '</thead>';
+                                itemsHtml += '<tbody>';
+                                
+                                for (var k = 0; k < items.length; k++) {
+                                    var item = items[k];
+                                    itemsHtml += '<tr>';
+                                    itemsHtml += '<td>' + escapeHtml(item.sku_code) + '</td>';
+                                    itemsHtml += '<td>' + escapeHtml(item.product_name) + '</td>';
+                                    itemsHtml += '<td>' + escapeHtml(item.batch_number) + '</td>';
+                                    itemsHtml += '<td><span class="bin-chip">' + escapeHtml(item.bin_no) + '</span></td>';
+                                    itemsHtml += '<td>' + item.quantity + '</td>';
+                                    itemsHtml += '<td>' + (item.dest_bin ? escapeHtml(item.dest_bin) : '-') + '</td>';
+                                    itemsHtml += '<td>' + (item.location_code ? escapeHtml(item.location_code) : '-') + '</td>';
+                                    itemsHtml += '<td>' + (item.received_date ? escapeHtml(item.received_date) : '-') + '</td>';
+                                    itemsHtml += '</tr>';
+                                }
+                                
+                                itemsHtml += '</tbody>';
+                                itemsHtml += '</table>';
+                                itemsHtml += '</div>';
+                                itemsDiv.innerHTML = itemsHtml;
+                                break;
+                            }
+                        }
+                        itemsDiv.style.display = 'block';
+                        this.textContent = 'Hide Items';
+                    } else {
+                        itemsDiv.style.display = 'none';
+                        this.textContent = 'View Items';
+                    }
+                });
+            }
+        });
+}
+
+document.getElementById('generateReportBtn').addEventListener('click', function() {
+    var startDate = document.getElementById('reportStartDate').value;
+    var endDate = document.getElementById('reportEndDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select start and end dates');
+        return;
+    }
+    
+    fetch('/api/stock-transfer')
+        .then(function(response) { return response.json(); })
+        .then(function(transfers) {
+            var filtered = [];
+            for (var i = 0; i < transfers.length; i++) {
+                var tDate = transfers[i].timestamp.split(' ')[0];
+                if (tDate >= startDate && tDate <= endDate) {
+                    filtered.push(transfers[i]);
+                }
+            }
+            
+            if (filtered.length === 0) {
+                document.getElementById('transferReportTable').innerHTML = '<div class="alert alert-info">No transfers found</div>';
+                return;
+            }
+            
+            var html = '<div class="table-responsive"><table class="table table-bordered">';
+            html += '<thead class="table-dark">';
+            html += '<tr><th>Transfer ID</th><th>Date</th><th>Details</th><th>Status</th><th>Created By</th></tr>';
+            html += '</thead><tbody>';
+            
+            for (var i = 0; i < filtered.length; i++) {
+                var t = filtered[i];
+                var isReceived = t.items && t.items.length > 0 && t.items[0].received_date;
+                var status = isReceived ? 'Received' : 'Pending';
+                html += '<tr>';
+                html += '<td>' + escapeHtml(t.transfer_id) + '</td>';
+                html += '<td>' + escapeHtml(t.timestamp) + '</td>';
+                html += '<td>' + escapeHtml(t.details) + '</td>';
+                html += '<td>' + status + '</td>';
+                html += '<td>' + escapeHtml(t.username) + '</td>';
+                html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+            document.getElementById('transferReportTable').innerHTML = html;
+        });
+});
+
+document.getElementById('downloadReportBtn').addEventListener('click', function() {
+    var startDate = document.getElementById('reportStartDate').value;
+    var endDate = document.getElementById('reportEndDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select start and end dates');
+        return;
+    }
+    
+    fetch('/api/stock-transfer')
+        .then(function(response) { return response.json(); })
+        .then(function(transfers) {
+            var csvRows = [['Transfer ID', 'Date', 'From', 'To', 'SKU', 'Product', 'Batch', 'Source Bin', 'Dest Bin', 'Quantity', 'Status', 'Created By', 'Received Date']];
+            
+            for (var i = 0; i < transfers.length; i++) {
+                var t = transfers[i];
+                var tDate = t.timestamp.split(' ')[0];
+                if (tDate >= startDate && tDate <= endDate && t.items) {
+                    var isReceived = t.items[0] && t.items[0].received_date;
+                    var status = isReceived ? 'Received' : 'Pending';
+                    for (var j = 0; j < t.items.length; j++) {
+                        var item = t.items[j];
+                        csvRows.push([
+                            t.transfer_id, t.timestamp,
+                            item.from_warehouse || '', item.to_warehouse || '',
+                            item.sku_code, item.product_name, item.batch_number,
+                            item.bin_no || '', item.dest_bin || '', item.quantity,
+                            status, t.username,
+                            item.received_date || ''
+                        ]);
+                    }
+                }
+            }
+            
+            var csvContent = csvRows.map(function(row) {
+                return row.map(function(cell) {
+                    var str = String(cell);
+                    if (str.includes(',') || str.includes('"')) {
+                        return '"' + str.replace(/"/g, '""') + '"';
+                    }
+                    return str;
+                }).join(',');
+            }).join('\n');
+            
+            var blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'transfer_report_' + startDate + '_to_' + endDate + '.csv';
+            link.click();
+            alert('✅ Report downloaded!');
+        });
+});
+
+document.getElementById('fromWarehouse').addEventListener('change', function() {
+    var fromVal = this.value;
+    var toSelect = document.getElementById('toWarehouse');
+    for (var i = 0; i < toSelect.options.length; i++) {
+        toSelect.options[i].disabled = (toSelect.options[i].value === fromVal);
+    }
+    document.getElementById('availableItemsContainer').style.display = 'none';
+    document.getElementById('noItemsMessage').style.display = 'none';
+});
+
+document.getElementById('toWarehouse').addEventListener('change', function() {
+    var toVal = this.value;
+    var fromSelect = document.getElementById('fromWarehouse');
+    for (var i = 0; i < fromSelect.options.length; i++) {
+        fromSelect.options[i].disabled = (fromSelect.options[i].value === toVal);
+    }
+});
+
+document.getElementById('searchStockBtn').addEventListener('click', searchStock);
+document.getElementById('searchSkuInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchStock();
+});
+
+async function init() {
+    setDefaultDates();
+    await loadInventory();
+    loadTransferHistory();
+}
+init();
+</script>
+{% endblock %}

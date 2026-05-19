@@ -1,0 +1,957 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .grn-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+    .grn-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px 10px 0 0;
+        margin: -20px -20px 20px -20px;
+    }
+    .grn-item-row {
+        background: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        position: relative;
+    }
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #333;
+        border-left: 3px solid #28a745;
+        padding-left: 10px;
+    }
+    .remove-item {
+        margin-top: 28px;
+        width: 100%;
+    }
+    .form-group {
+        margin-bottom: 10px;
+    }
+    .form-group label {
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 3px;
+        color: #555;
+    }
+    .grn-detail-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+    .bin-chip {
+        background: #667eea;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 15px;
+        font-size: 11px;
+        display: inline-block;
+    }
+</style>
+
+<h2>📋 Goods Receive Note (GRN)</h2>
+
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#createGRN">📝 Create GRN</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#bulkGRN">📎 Bulk GRN Upload</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#grnHistory">📋 GRN History</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#grnReport">📊 GRN Report</a>
+    </li>
+</ul>
+
+<div class="tab-content mt-3">
+    
+    <!-- CREATE GRN TAB -->
+    <div class="tab-pane fade show active" id="createGRN">
+        <div class="grn-card">
+            <div class="grn-header">
+                <h5 class="mb-0">📝 Create Goods Receive Note</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>GRN Number</label>
+                            <input type="text" class="form-control" id="grnNumber" placeholder="Auto-generate">
+                            <small class="text-muted">Leave empty for auto</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>GRN Date</label>
+                            <input type="date" class="form-control" id="grnDate">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Supplier Name *</label>
+                            <input type="text" class="form-control" id="supplierName" placeholder="Supplier name">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Invoice Number</label>
+                            <input type="text" class="form-control" id="invoiceNumber" placeholder="Invoice number">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Invoice Date</label>
+                            <input type="date" class="form-control" id="invoiceDate">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Warehouse *</label>
+                            <select class="form-control" id="warehouseName">
+                                <option value="">Select Warehouse</option>
+                                <option value="Manak_Vihar">📍 Manak Vihar, Delhi</option>
+                                <option value="Kaushambi">📍 Kaushambi, Ghaziabad</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Remarks</label>
+                            <textarea class="form-control" id="grnRemarks" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="section-title">📦 Items Received</div>
+                
+                <div id="grnItemsContainer">
+                    <div class="grn-item-row" data-item-index="0">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>SKU Code *</label>
+                                    <input type="text" class="form-control sku-input" placeholder="SKU">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Product Name</label>
+                                    <input type="text" class="form-control product-name-display" readonly placeholder="Auto fetch" style="background:#e9ecef;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Batch Number *</label>
+                                    <input type="text" class="form-control batch-input" placeholder="Batch No">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Mfg Date</label>
+                                    <input type="date" class="form-control mfg-date">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Expiry Date</label>
+                                    <input type="date" class="form-control exp-date">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Quantity *</label>
+                                    <input type="number" class="form-control qty-input" min="1" placeholder="Qty">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Purchase Price</label>
+                                    <input type="number" class="form-control pur-price" step="0.01" placeholder="Price">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>MRP</label>
+                                    <input type="number" class="form-control mrp-input" step="0.01" placeholder="MRP">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Selling Price</label>
+                                    <input type="number" class="form-control sell-price" step="0.01" placeholder="Price">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Condition</label>
+                                    <select class="form-control condition-select">
+                                        <option>Good</option>
+                                        <option>Damaged</option>
+                                        <option>Expired</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Bin No</label>
+                                    <input type="text" class="form-control bin-input" placeholder="Bin" list="binList">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <input type="text" class="form-control location-input" placeholder="SHELF">
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button class="btn btn-danger btn-sm remove-item w-100">✕ Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Item Remarks</label>
+                                    <input type="text" class="form-control item-remarks" placeholder="Item remarks">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-info btn-sm mt-2" id="addMoreItems">+ Add More Items</button>
+                <button class="btn btn-success w-100 mt-3" id="createGRNBtn">✅ Create GRN & Receive Stock</button>
+                <div id="grnMsg" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- BULK GRN UPLOAD TAB -->
+    <div class="tab-pane fade" id="bulkGRN">
+        <div class="grn-card">
+            <div class="grn-header">
+                <h5 class="mb-0">📎 Bulk GRN Upload</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="alert alert-warning">
+                            <strong>CSV Format:</strong><br>
+                            <code>SKU, Batch No, Mfg Date, Expiry Date, Quantity, Purchase Price, MRP, Selling Price, Condition, Bin No, Location Code, Remarks</code>
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="file" class="form-control" id="bulkGRNFile" accept=".csv">
+                            <button class="btn btn-info" id="downloadGRNSample">Download Sample CSV</button>
+                            <button class="btn btn-warning" id="uploadGRNBtn">Upload & Import</button>
+                        </div>
+                        <div id="bulkGRNMsg" class="mt-2"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h6>Supplier Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group mb-2">
+                                    <label>Supplier Name *</label>
+                                    <input type="text" class="form-control" id="bulkSupplierName">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label>Invoice Number</label>
+                                    <input type="text" class="form-control" id="bulkInvoiceNumber">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label>Warehouse *</label>
+                                    <select class="form-control" id="bulkWarehouseName">
+                                        <option value="Manak_Vihar">Manak Vihar, Delhi</option>
+                                        <option value="Kaushambi">Kaushambi, Ghaziabad</option>
+                                    </select>
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label>Remarks</label>
+                                    <textarea class="form-control" id="bulkRemarks" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- GRN HISTORY TAB -->
+    <div class="tab-pane fade" id="grnHistory">
+        <div class="grn-card">
+            <div class="grn-header">
+                <h5 class="mb-0">📋 Goods Receive Note History</h5>
+            </div>
+            <div class="card-body">
+                <div id="grnHistoryList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- GRN REPORT TAB -->
+    <div class="tab-pane fade" id="grnReport">
+        <div class="grn-card">
+            <div class="grn-header">
+                <h5 class="mb-0">📊 GRN Report</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" id="reportStartDate">
+                    </div>
+                    <div class="col-md-4">
+                        <label>End Date</label>
+                        <input type="date" class="form-control" id="reportEndDate">
+                    </div>
+                    <div class="col-md-4">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary w-100" id="generateGRNReport">Generate Report</button>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <button class="btn btn-success w-100" id="downloadGRNReport">Download GRN Report (CSV)</button>
+                    </div>
+                </div>
+                <div id="grnReportTable" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<datalist id="binList">
+    <option>A-01</option><option>A-02</option><option>A-03</option><option>A-04</option>
+    <option>B-01</option><option>B-02</option><option>B-03</option><option>B-04</option>
+    <option>C-01</option><option>C-02</option><option>C-03</option><option>C-04</option>
+    <option>D-01</option><option>D-02</option><option>D-03</option><option>D-04</option>
+    <option>E-01</option><option>E-02</option><option>E-03</option><option>E-04</option>
+    <option>F-02</option><option>F-03</option><option>G-01</option><option>G-02</option>
+    <option>G-03</option><option>G-04</option><option>K-B01</option><option>K-B02</option>
+    <option>K-B03</option><option>K-B04</option>
+</datalist>
+
+<script>
+// Get current location from global storage
+var currentLocation = localStorage.getItem('globalLocation') || 'Manak_Vihar';
+console.log("Current Location for GRN:", currentLocation);
+
+// Set default warehouse from global location
+document.addEventListener('DOMContentLoaded', function() {
+    var warehouseSelect = document.getElementById('warehouseName');
+    var bulkWarehouse = document.getElementById('bulkWarehouseName');
+    if (warehouseSelect && currentLocation) warehouseSelect.value = currentLocation;
+    if (bulkWarehouse && currentLocation) bulkWarehouse.value = currentLocation;
+});
+
+// Global variables
+var productsData = [];
+
+// Set default dates
+function setDefaultDates() {
+    var today = new Date().toISOString().split('T')[0];
+    var grnDate = document.getElementById('grnDate');
+    var reportStart = document.getElementById('reportStartDate');
+    var reportEnd = document.getElementById('reportEndDate');
+    if (grnDate) grnDate.value = today;
+    if (reportStart) {
+        var firstDay = new Date();
+        firstDay.setDate(1);
+        reportStart.value = firstDay.toISOString().split('T')[0];
+    }
+    if (reportEnd) reportEnd.value = today;
+}
+
+function loadProductsData() {
+    return fetch('/api/products')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            productsData = data;
+            return data;
+        });
+}
+
+function getProductNameBySKU(sku) {
+    for (var i = 0; i < productsData.length; i++) {
+        if (productsData[i].sku_code === sku.toUpperCase()) {
+            return productsData[i].product_name;
+        }
+    }
+    return '';
+}
+
+function setupRowEvents(row) {
+    var skuInput = row.querySelector('.sku-input');
+    var productDisplay = row.querySelector('.product-name-display');
+    
+    skuInput.addEventListener('change', function() {
+        var sku = this.value.trim().toUpperCase();
+        if (sku) {
+            var productName = getProductNameBySKU(sku);
+            if (productName) {
+                productDisplay.value = productName;
+                productDisplay.style.color = 'green';
+            } else {
+                fetch('/api/products/' + sku)
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        if (data.product_name) {
+                            productDisplay.value = data.product_name;
+                            productDisplay.style.color = 'green';
+                            productsData.push({ sku_code: sku, product_name: data.product_name });
+                        } else {
+                            productDisplay.value = '❌ SKU NOT FOUND!';
+                            productDisplay.style.color = 'red';
+                        }
+                    })
+                    .catch(function() {
+                        productDisplay.value = '❌ SKU NOT FOUND!';
+                        productDisplay.style.color = 'red';
+                    });
+            }
+        } else {
+            productDisplay.value = '';
+        }
+    });
+    
+    // Also clear on input blur if needed
+    skuInput.addEventListener('blur', function() {
+        if (!this.value.trim()) {
+            productDisplay.value = '';
+        }
+    });
+}
+
+function addMoreItems() {
+    var container = document.getElementById('grnItemsContainer');
+    var newIndex = container.children.length;
+    var newItem = document.createElement('div');
+    newItem.className = 'grn-item-row';
+    newItem.setAttribute('data-item-index', newIndex);
+    newItem.innerHTML = `
+        <div class="row">
+            <div class="col-md-2"><div class="form-group"><label>SKU Code *</label><input type="text" class="form-control sku-input" placeholder="SKU"></div></div>
+            <div class="col-md-2"><div class="form-group"><label>Product Name</label><input type="text" class="form-control product-name-display" readonly placeholder="Auto fetch" style="background:#e9ecef;"></div></div>
+            <div class="col-md-2"><div class="form-group"><label>Batch Number *</label><input type="text" class="form-control batch-input" placeholder="Batch No"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Mfg Date</label><input type="date" class="form-control mfg-date"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Expiry Date</label><input type="date" class="form-control exp-date"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Quantity *</label><input type="number" class="form-control qty-input" min="1" placeholder="Qty"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Purchase Price</label><input type="number" class="form-control pur-price" step="0.01" placeholder="Price"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>MRP</label><input type="number" class="form-control mrp-input" step="0.01" placeholder="MRP"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Selling Price</label><input type="number" class="form-control sell-price" step="0.01" placeholder="Price"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Condition</label><select class="form-control condition-select"><option>Good</option><option>Damaged</option><option>Expired</option></select></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Bin No</label><input type="text" class="form-control bin-input" placeholder="Bin" list="binList"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>Location</label><input type="text" class="form-control location-input" placeholder="SHELF"></div></div>
+            <div class="col-md-1"><div class="form-group"><label>&nbsp;</label><button class="btn btn-danger btn-sm remove-item w-100">✕ Remove</button></div></div>
+        </div>
+        <div class="row mt-2"><div class="col-md-12"><div class="form-group"><label>Item Remarks</label><input type="text" class="form-control item-remarks" placeholder="Item remarks"></div></div></div>
+    `;
+    container.appendChild(newItem);
+    setupRowEvents(newItem);
+    
+    var removeBtns = document.querySelectorAll('.remove-item');
+    if (container.children.length > 1) {
+        for (var i = 0; i < removeBtns.length; i++) {
+            removeBtns[i].style.display = 'block';
+        }
+    }
+}
+
+// Remove item
+$(document).on('click', '.remove-item', function(e) {
+    e.preventDefault();
+    var container = document.getElementById('grnItemsContainer');
+    if (container.children.length > 1) {
+        $(this).closest('.grn-item-row').remove();
+        var removeBtns = document.querySelectorAll('.remove-item');
+        if (container.children.length === 1) {
+            for (var i = 0; i < removeBtns.length; i++) {
+                removeBtns[i].style.display = 'block';
+            }
+        }
+    } else {
+        alert('At least one item is required');
+    }
+});
+
+// Create GRN
+document.getElementById('createGRNBtn').addEventListener('click', function() {
+    var grnNumber = document.getElementById('grnNumber').value.trim();
+    var grnDate = document.getElementById('grnDate').value;
+    var supplierName = document.getElementById('supplierName').value.trim();
+    var invoiceNumber = document.getElementById('invoiceNumber').value.trim();
+    var invoiceDate = document.getElementById('invoiceDate').value;
+    var warehouseName = document.getElementById('warehouseName').value;
+    var grnRemarks = document.getElementById('grnRemarks').value;
+    var grnMsg = document.getElementById('grnMsg');
+    
+    if (!supplierName) {
+        grnMsg.innerHTML = '<div class="alert alert-danger">Please enter supplier name</div>';
+        return;
+    }
+    if (!warehouseName) {
+        grnMsg.innerHTML = '<div class="alert alert-danger">Please select warehouse</div>';
+        return;
+    }
+    
+    var items = [];
+    var valid = true;
+    var rows = document.querySelectorAll('.grn-item-row');
+    
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var sku = row.querySelector('.sku-input').value.trim().toUpperCase();
+        var batch = row.querySelector('.batch-input').value.trim();
+        var mfgDate = row.querySelector('.mfg-date').value;
+        var expDate = row.querySelector('.exp-date').value;
+        var quantity = parseInt(row.querySelector('.qty-input').value) || 0;
+        var purchasePrice = parseFloat(row.querySelector('.pur-price').value) || 0;
+        var mrp = parseFloat(row.querySelector('.mrp-input').value) || 0;
+        var sellingPrice = parseFloat(row.querySelector('.sell-price').value) || 0;
+        var condition = row.querySelector('.condition-select').value;
+        var binNo = row.querySelector('.bin-input').value;
+        var locationCode = row.querySelector('.location-input').value;
+        var itemRemarks = row.querySelector('.item-remarks').value;
+        var productName = row.querySelector('.product-name-display').value;
+        
+        if (!sku) { alert('Please enter SKU for all items'); valid = false; break; }
+        if (!batch) { alert('Please enter Batch Number for all items'); valid = false; break; }
+        if (quantity <= 0) { alert('Please enter valid quantity for all items'); valid = false; break; }
+        
+        if (!productName || productName.includes('NOT FOUND')) {
+            productName = sku;
+        }
+        
+        items.push({
+            sku_code: sku,
+            product_name: productName,
+            batch_number: batch,
+            manufacturing_date: mfgDate,
+            expiry_date: expDate,
+            quantity: quantity,
+            purchase_price: purchasePrice,
+            mrp: mrp,
+            selling_price: sellingPrice,
+            condition: condition,
+            bin_no: binNo,
+            location_code: locationCode,
+            remarks: itemRemarks
+        });
+    }
+    
+    if (!valid) return;
+    
+    grnMsg.innerHTML = '<div class="alert alert-info">Creating GRN...</div>';
+    
+    fetch('/api/grn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            grn_number: grnNumber,
+            grn_date: grnDate,
+            supplier_name: supplierName,
+            invoice_number: invoiceNumber,
+            invoice_date: invoiceDate,
+            warehouse_name: warehouseName,
+            items: items,
+            remarks: grnRemarks
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            grnMsg.innerHTML = '<div class="alert alert-success">✅ ' + data.message + '! GRN Number: ' + data.grn_number + '</div>';
+            document.getElementById('grnNumber').value = '';
+            document.getElementById('supplierName').value = '';
+            document.getElementById('invoiceNumber').value = '';
+            document.getElementById('invoiceDate').value = '';
+            document.getElementById('warehouseName').value = '';
+            document.getElementById('grnRemarks').value = '';
+            
+            var container = document.getElementById('grnItemsContainer');
+            var firstRow = container.querySelector('.grn-item-row');
+            if (firstRow) {
+                firstRow.querySelector('.sku-input').value = '';
+                firstRow.querySelector('.product-name-display').value = '';
+                firstRow.querySelector('.batch-input').value = '';
+                firstRow.querySelector('.mfg-date').value = '';
+                firstRow.querySelector('.exp-date').value = '';
+                firstRow.querySelector('.qty-input').value = '';
+                firstRow.querySelector('.pur-price').value = '';
+                firstRow.querySelector('.mrp-input').value = '';
+                firstRow.querySelector('.sell-price').value = '';
+                firstRow.querySelector('.bin-input').value = '';
+                firstRow.querySelector('.location-input').value = '';
+                firstRow.querySelector('.item-remarks').value = '';
+            }
+            while (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            
+            loadGRNHistory();
+            loadProductsData();
+            setTimeout(function() { grnMsg.innerHTML = ''; }, 3000);
+        } else {
+            grnMsg.innerHTML = '<div class="alert alert-danger">❌ ' + data.error + '</div>';
+        }
+    });
+});
+
+// Download sample CSV
+document.getElementById('downloadGRNSample').addEventListener('click', function() {
+    var sample = "SKU,Batch No,Mfg Date,Expiry Date,Quantity,Purchase Price,MRP,Selling Price,Condition,Bin No,Location Code,Remarks\n" +
+                 "TEST001,BATCH001,2026-05-01,2027-05-01,100,50,100,80,Good,A-01,SHELF-A1,Test entry";
+    var blob = new Blob(["\uFEFF" + sample], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'grn_sample.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+});
+
+// Bulk GRN Upload
+document.getElementById('uploadGRNBtn').addEventListener('click', function() {
+    var file = document.getElementById('bulkGRNFile').files[0];
+    var supplierName = document.getElementById('bulkSupplierName').value.trim();
+    var warehouseName = document.getElementById('bulkWarehouseName').value;
+    var invoiceNumber = document.getElementById('bulkInvoiceNumber').value.trim();
+    var bulkRemarks = document.getElementById('bulkRemarks').value;
+    var bulkMsg = document.getElementById('bulkGRNMsg');
+    
+    if (!supplierName) {
+        bulkMsg.innerHTML = '<div class="alert alert-danger">Please enter supplier name</div>';
+        return;
+    }
+    if (!warehouseName) {
+        bulkMsg.innerHTML = '<div class="alert alert-danger">Please select warehouse</div>';
+        return;
+    }
+    if (!file) {
+        bulkMsg.innerHTML = '<div class="alert alert-danger">Please select a CSV file</div>';
+        return;
+    }
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var lines = e.target.result.split(/\r?\n/);
+        var items = [];
+        var errors = [];
+        var successCount = 0;
+        
+        for (var i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            var cols = lines[i].split(',');
+            if (cols.length < 8) {
+                errors.push('Line ' + (i+1) + ': Insufficient columns');
+                continue;
+            }
+            
+            var sku = cols[0].trim().toUpperCase();
+            var batch = cols[1].trim();
+            var mfgDate = cols[2].trim();
+            var expDate = cols[3].trim();
+            var quantity = parseInt(cols[4]) || 0;
+            var purchasePrice = parseFloat(cols[5]) || 0;
+            var mrp = parseFloat(cols[6]) || 0;
+            var sellingPrice = parseFloat(cols[7]) || 0;
+            var condition = cols[8] ? cols[8].trim() : 'Good';
+            var binNo = cols[9] ? cols[9].trim() : '';
+            var locationCode = cols[10] ? cols[10].trim() : '';
+            var remarks = cols[11] ? cols[11].trim() : '';
+            
+            if (!sku || !batch || quantity <= 0) {
+                errors.push('Line ' + (i+1) + ': Missing required fields');
+                continue;
+            }
+            
+            items.push({
+                sku_code: sku,
+                product_name: sku,
+                batch_number: batch,
+                manufacturing_date: mfgDate,
+                expiry_date: expDate,
+                quantity: quantity,
+                purchase_price: purchasePrice,
+                mrp: mrp,
+                selling_price: sellingPrice,
+                condition: condition,
+                bin_no: binNo,
+                location_code: locationCode,
+                remarks: remarks
+            });
+            successCount++;
+        }
+        
+        if (items.length === 0) {
+            bulkMsg.innerHTML = '<div class="alert alert-danger">No valid items found. Errors: ' + errors.length + '</div>';
+            return;
+        }
+        
+        bulkMsg.innerHTML = '<div class="alert alert-info">Processing bulk GRN...</div>';
+        
+        fetch('/api/grn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                grn_number: '',
+                grn_date: new Date().toISOString().split('T')[0],
+                supplier_name: supplierName,
+                invoice_number: invoiceNumber,
+                invoice_date: '',
+                warehouse_name: warehouseName,
+                items: items,
+                remarks: 'Bulk Upload: ' + bulkRemarks
+            })
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                bulkMsg.innerHTML = '<div class="alert alert-success">✅ ' + data.message + '! GRN Number: ' + data.grn_number + '<br>Items: ' + successCount + ', Errors: ' + errors.length + '</div>';
+                if (errors.length > 0) {
+                    bulkMsg.innerHTML += '<div class="alert alert-warning mt-2"><strong>Errors:</strong><br>' + errors.join('<br>') + '</div>';
+                }
+                loadGRNHistory();
+                document.getElementById('bulkGRNFile').value = '';
+                document.getElementById('bulkSupplierName').value = '';
+                document.getElementById('bulkInvoiceNumber').value = '';
+                document.getElementById('bulkRemarks').value = '';
+            } else {
+                bulkMsg.innerHTML = '<div class="alert alert-danger">❌ ' + data.error + '</div>';
+            }
+        });
+    };
+    reader.readAsText(file);
+});
+
+// Load GRN History
+function loadGRNHistory() {
+    fetch('/api/grn')
+        .then(function(response) { return response.json(); })
+        .then(function(grns) {
+            var historyDiv = document.getElementById('grnHistoryList');
+            if (grns.length === 0) {
+                historyDiv.innerHTML = '<div class="alert alert-info">No GRN records found</div>';
+                return;
+            }
+            
+            var html = '';
+            for (var i = 0; i < grns.length; i++) {
+                var grn = grns[i];
+                html += '<div class="grn-detail-card">';
+                html += '<div class="row">';
+                html += '<div class="col-md-3"><strong>GRN:</strong> ' + grn.grn_number + '</div>';
+                html += '<div class="col-md-2"><strong>Date:</strong> ' + grn.grn_date + '</div>';
+                html += '<div class="col-md-3"><strong>Supplier:</strong> ' + grn.supplier_name + '</div>';
+                html += '<div class="col-md-2"><strong>Invoice:</strong> ' + (grn.invoice_number || '-') + '</div>';
+                html += '<div class="col-md-2"><strong>Total:</strong> ₹' + grn.total_amount.toFixed(2) + '</div>';
+                html += '</div>';
+                html += '<div class="row mt-2">';
+                html += '<div class="col-md-12">';
+                html += '<button class="btn btn-sm btn-link view-items-btn" data-grn-id="' + grn.id + '">View Items</button>';
+                html += '<div id="grn-items-' + grn.id + '" style="display:none; margin-top:10px;"></div>';
+                html += '</div></div>';
+                html += '<div class="row mt-1"><div class="col-md-12"><small>Created: ' + grn.created_by + ' on ' + grn.created_on + '</small></div></div>';
+                html += '</div>';
+            }
+            historyDiv.innerHTML = html;
+            
+            // Add click handlers
+            var btns = document.querySelectorAll('.view-items-btn');
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].addEventListener('click', function() {
+                    var grnId = this.getAttribute('data-grn-id');
+                    var itemsDiv = document.getElementById('grn-items-' + grnId);
+                    if (itemsDiv.style.display === 'none') {
+                        fetch('/api/grn/' + grnId)
+                            .then(function(response) { return response.json(); })
+                            .then(function(grnDetail) {
+                                var itemsHtml = '<div class="table-responsive"><table class="table table-bordered table-sm">';
+                                itemsHtml += '<thead class="table-secondary">';
+                                itemsHtml += '<tr><th>SKU</th><th>Product</th><th>Batch</th><th>Qty</th><th>Pur Price</th><th>MRP</th><th>Sell Price</th><th>Total</th><th>Bin</th><th>Location</th></tr>';
+                                itemsHtml += '</thead><tbody>';
+                                var grnTotal = 0;
+                                for (var j = 0; j < grnDetail.items.length; j++) {
+                                    var item = grnDetail.items[j];
+                                    var totalPrice = item.quantity * item.purchase_price;
+                                    grnTotal += totalPrice;
+                                    itemsHtml += '<tr>';
+                                    itemsHtml += '<td>' + item.sku_code + '</td>';
+                                    itemsHtml += '<td>' + item.product_name + '</td>';
+                                    itemsHtml += '<td>' + item.batch_number + '</td>';
+                                    itemsHtml += '<td>' + item.quantity + '</td>';
+                                    itemsHtml += '<td>₹' + item.purchase_price.toFixed(2) + '</td>';
+                                    itemsHtml += '<td>₹' + item.mrp.toFixed(2) + '</td>';
+                                    itemsHtml += '<td>₹' + item.selling_price.toFixed(2) + '</td>';
+                                    itemsHtml += '<td><strong>₹' + totalPrice.toFixed(2) + '</strong></td>';
+                                    itemsHtml += '<td><span class="bin-chip">' + (item.bin_no || '-') + '</span></td>';
+                                    itemsHtml += '<td>' + (item.location_code || '-') + '</td>';
+                                    itemsHtml += '</tr>';
+                                }
+                                itemsHtml += '<tr class="table-info"><td colspan="7"><strong>Grand Total</strong></td><td><strong>₹' + grnTotal.toFixed(2) + '</strong></td><td colspan="2"></td></tr>';
+                                itemsHtml += '</tbody></table></div>';
+                                itemsDiv.innerHTML = itemsHtml;
+                                itemsDiv.style.display = 'block';
+                                this.textContent = 'Hide Items';
+                            });
+                    } else {
+                        itemsDiv.style.display = 'none';
+                        this.textContent = 'View Items';
+                    }
+                });
+            }
+        });
+}
+
+// GRN Report
+document.getElementById('generateGRNReport').addEventListener('click', async function() {
+    var startDate = document.getElementById('reportStartDate').value;
+    var endDate = document.getElementById('reportEndDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    var response = await fetch('/api/grn');
+    var grns = await response.json();
+    
+    var filtered = [];
+    for (var i = 0; i < grns.length; i++) {
+        var grnDate = grns[i].grn_date.split(' ')[0];
+        if (grnDate >= startDate && grnDate <= endDate) {
+            filtered.push(grns[i]);
+        }
+    }
+    
+    if (filtered.length === 0) {
+        document.getElementById('grnReportTable').innerHTML = '<div class="alert alert-info">No GRN records found</div>';
+        return;
+    }
+    
+    var html = '';
+    var overallTotal = 0;
+    
+    for (var i = 0; i < filtered.length; i++) {
+        var grn = filtered[i];
+        var grnDetail = await fetch('/api/grn/' + grn.id).then(function(res) { return res.json(); });
+        var grnTotal = 0;
+        
+        html += '<div class="card mb-3"><div class="card-header bg-primary text-white"><strong>GRN: ' + grn.grn_number + '</strong> | Supplier: ' + grn.supplier_name + ' | Date: ' + grn.grn_date + '</div>';
+        html += '<div class="card-body p-0"><div class="table-responsive"><table class="table table-bordered mb-0">';
+        html += '<thead class="table-secondary">';
+        html += '<tr><th>SKU</th><th>Product</th><th>Batch</th><th>Qty</th><th>Pur Price</th><th>MRP</th><th>Sell Price</th><th>Total</th><th>Bin</th><th>Location</th></tr>';
+        html += '</thead><tbody>';
+        
+        for (var j = 0; j < grnDetail.items.length; j++) {
+            var item = grnDetail.items[j];
+            var totalPrice = item.quantity * item.purchase_price;
+            grnTotal += totalPrice;
+            html += '<tr>';
+            html += '<td>' + item.sku_code + '</td>';
+            html += '<td>' + item.product_name + '</td>';
+            html += '<td>' + item.batch_number + '</td>';
+            html += '<td>' + item.quantity + '</td>';
+            html += '<td>₹' + item.purchase_price.toFixed(2) + '</td>';
+            html += '<td>₹' + item.mrp.toFixed(2) + '</td>';
+            html += '<td>₹' + item.selling_price.toFixed(2) + '</td>';
+            html += '<td><strong>₹' + totalPrice.toFixed(2) + '</strong></td>';
+            html += '<td><span class="bin-chip">' + (item.bin_no || '-') + '</span></td>';
+            html += '<td>' + (item.location_code || '-') + '</td>';
+            html += '</tr>';
+        }
+        
+        overallTotal += grnTotal;
+        html += '<tr class="table-info"><td colspan="7"><strong>Subtotal</strong></td><td><strong>₹' + grnTotal.toFixed(2) + '</strong></td><td colspan="2"></td></tr>';
+        html += '</tbody></table></div></div></div>';
+    }
+    
+    html += '<div class="alert alert-success"><strong>📊 Grand Total: ₹' + overallTotal.toFixed(2) + '</strong></div>';
+    document.getElementById('grnReportTable').innerHTML = html;
+});
+
+// Download GRN Report
+document.getElementById('downloadGRNReport').addEventListener('click', async function() {
+    var startDate = document.getElementById('reportStartDate').value;
+    var endDate = document.getElementById('reportEndDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    var response = await fetch('/api/grn');
+    var grns = await response.json();
+    
+    var filtered = [];
+    for (var i = 0; i < grns.length; i++) {
+        var grnDate = grns[i].grn_date.split(' ')[0];
+        if (grnDate >= startDate && grnDate <= endDate) {
+            filtered.push(grns[i]);
+        }
+    }
+    
+    var csvRows = [['GRN Number', 'GRN Date', 'Supplier', 'Invoice', 'SKU', 'Product', 'Batch', 'Quantity', 'Purchase Price', 'MRP', 'Selling Price', 'Total Price', 'Bin', 'Location', 'Warehouse', 'Created By', 'Created On']];
+    
+    for (var i = 0; i < filtered.length; i++) {
+        var grn = filtered[i];
+        var grnDetail = await fetch('/api/grn/' + grn.id).then(function(res) { return res.json(); });
+        for (var j = 0; j < grnDetail.items.length; j++) {
+            var item = grnDetail.items[j];
+            var totalPrice = item.quantity * item.purchase_price;
+            csvRows.push([
+                grn.grn_number, grn.grn_date, grn.supplier_name, grn.invoice_number || '',
+                item.sku_code, item.product_name, item.batch_number, item.quantity,
+                item.purchase_price, item.mrp, item.selling_price, totalPrice,
+                item.bin_no || '', item.location_code || '', grn.warehouse_name,
+                grn.created_by, grn.created_on
+            ]);
+        }
+    }
+    
+    var csvContent = '';
+    for (var i = 0; i < csvRows.length; i++) {
+        csvContent += csvRows[i].join(',') + '\n';
+    }
+    var blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'grn_report_' + startDate + '_to_' + endDate + '.csv';
+    link.click();
+    alert('✅ GRN Report downloaded successfully!');
+});
+
+// Initialize
+async function init() {
+    setDefaultDates();
+    await loadProductsData();
+    loadGRNHistory();
+    var firstRow = document.querySelector('.grn-item-row');
+    if (firstRow) setupRowEvents(firstRow);
+}
+init();
+</script>
+{% endblock %}

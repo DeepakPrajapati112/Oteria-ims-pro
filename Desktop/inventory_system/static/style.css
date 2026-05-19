@@ -1,0 +1,33 @@
+/* Additional custom styles */
+.card-stats {
+    transition: transform 0.3s;
+}
+
+.card-stats:hover {
+    transform: translateY(-5px);
+}
+
+.nav-tabs .nav-link {
+    color: #667eea;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.btn-primary {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.btn-primary:hover {
+    background-color: #5a67d8;
+    border-color: #5a67d8;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
